@@ -3,13 +3,29 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Fovea — Agentic OS for data analytics</title>
-    <meta name="description" content="Accuracy at the center. Fovea is an open-source Agentic Operating System for data analytics. Reads are autonomous. Writes are hash-bound. Production stays gated." />
+    <title>Fovea — control plane for enterprise analytics agents</title>
+    <meta
+      name="description"
+      content="For analytics, security, and audit. Named metrics return SQL and provenance. Writes need an exact-hash approval. Production stays gated. No global switch."
+    />
     <meta name="theme-color" content="#09090B" />
+    <link rel="canonical" href="https://salahuddinuqaili.github.io/fovea/" />
+    <meta property="og:title" content="Fovea" />
+    <meta
+      property="og:description"
+      content="The control plane between analysts, models, and the warehouse."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://salahuddinuqaili.github.io/fovea/" />
+    <meta property="og:image" content="https://salahuddinuqaili.github.io/fovea/desk.png" />
+    <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
         --bg: #09090b;
@@ -17,63 +33,244 @@
         --surface-2: #18181c;
         --fg: #f2f0ea;
         --muted: #8f8f98;
-        --subtle: #6b6b73;
+        --subtle: #7a7a82;
         --border: color-mix(in oklab, var(--fg) 12%, transparent);
         --accent: #c5cdd6;
         --accent-fg: #09090b;
-        --ok: #7d9b84;
-        --warn: #c4a574;
-        --danger: #c47a74;
         --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
         --display: "Instrument Serif", Georgia, serif;
         --mono: "IBM Plex Mono", ui-monospace, monospace;
+        --radius: 16px;
+        --radius-sm: 8px;
       }
       * { box-sizing: border-box; }
+      html {
+        color-scheme: dark;
+        scroll-behavior: smooth;
+        -webkit-font-smoothing: antialiased;
+        scroll-padding-top: 80px;
+      }
       html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); }
+      body { line-height: 1.5; }
       a { color: inherit; }
-      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
-      header { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+      button { font: inherit; color: inherit; cursor: pointer; }
+      h1, h2, h3 { text-wrap: balance; font-weight: 400; }
+      p { text-wrap: pretty; }
+      img { max-width: 100%; height: auto; display: block; }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+      .skip {
+        position: absolute; left: 12px; top: -48px;
+        background: var(--accent); color: var(--accent-fg);
+        padding: 8px 12px; border-radius: var(--radius-sm); z-index: 20;
+      }
+      .skip:focus { top: 12px; }
+      .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+      header.top {
+        position: sticky; top: 0; z-index: 10;
+        background: color-mix(in oklab, var(--bg) 90%, transparent);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--border);
+      }
+      .top-inner {
+        display: flex; align-items: center; justify-content: space-between;
+        gap: 16px; min-height: 64px;
+      }
       .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-      .brand span { font-family: var(--display); font-size: 28px; }
-      nav { display: flex; gap: 18px; font-size: 13px; color: var(--muted); }
-      nav a { text-decoration: none; }
+      .brand span { font-family: var(--display); font-size: 26px; line-height: 1; }
+      nav { display: flex; align-items: center; gap: 2px; font-size: 13px; color: var(--muted); }
+      nav a {
+        text-decoration: none; min-height: 44px;
+        display: inline-flex; align-items: center; padding: 0 10px;
+        border-radius: var(--radius-sm);
+      }
       nav a:hover { color: var(--fg); }
-      .btn { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); text-decoration: none; font-size: 14px; font-weight: 500; }
-      .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--border); }
-      .hero { padding: 72px 0 48px; }
-      .kicker { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--subtle); }
-      h1 { font-family: var(--display); font-size: clamp(48px, 9vw, 88px); line-height: 0.95; letter-spacing: -0.02em; font-weight: 400; margin: 16px 0 0; max-width: 16ch; }
-      .lede { max-width: 62ch; color: var(--muted); font-size: 18px; line-height: 1.6; margin-top: 24px; }
-      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
-      .grid3 { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); margin-top: 48px; }
-      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
-      .card .k { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--subtle); }
-      .card h3 { font-family: var(--display); font-size: 32px; margin: 8px 0 0; font-weight: 400; }
+      .btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        min-height: 44px; padding: 0 16px; border-radius: var(--radius-sm);
+        background: var(--accent); color: var(--accent-fg);
+        text-decoration: none; font-size: 14px; font-weight: 500; border: 0;
+      }
+      .btn.ghost {
+        background: transparent; color: var(--fg);
+        border: 1px solid var(--border);
+      }
+      .btn:hover { filter: brightness(1.06); }
+      .hero { padding: 64px 0 8px; }
+      .kicker {
+        font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+        color: var(--subtle); margin: 0;
+      }
+      h1 {
+        font-family: var(--display);
+        font-size: clamp(36px, 6.4vw, 64px);
+        line-height: 1.04; letter-spacing: -0.02em;
+        margin: 16px 0 0; max-width: 18ch;
+      }
+      .lede {
+        max-width: 58ch; color: var(--muted); font-size: 18px;
+        line-height: 1.6; margin-top: 20px;
+      }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
+      .route {
+        display: flex; flex-wrap: wrap; gap: 4px 4px;
+        margin: 16px 0 0; padding: 0; list-style: none;
+        font-size: 13px; color: var(--muted);
+      }
+      .route a {
+        text-decoration: none; min-height: 44px;
+        display: inline-flex; align-items: center; padding: 0 12px 0 0;
+      }
+      .route a:hover { color: var(--fg); }
+      .route a span { color: var(--subtle); margin-right: 6px; font-family: var(--mono); font-size: 11px; }
+      .shot {
+        margin: 40px 0 0;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        background: var(--surface);
+      }
+      .shot figcaption {
+        padding: 12px 16px 14px;
+        font-size: 13px; color: var(--muted);
+        border-top: 1px solid var(--border);
+      }
+      .grid3 { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-top: 40px; }
+      .card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 20px;
+      }
+      .card .k {
+        font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--subtle); margin: 0;
+      }
+      .card h3 { font-family: var(--display); font-size: 28px; margin: 8px 0 0; }
       .card p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 10px 0 0; }
-      section { padding: 56px 0; }
-      h2 { font-family: var(--display); font-size: 36px; font-weight: 400; margin: 0 0 24px; }
-      .principles { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
-      .principles li { list-style: none; display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; font-size: 14px; }
-      .principles ol { margin: 0; padding: 0; display: contents; }
-      .num { font-family: var(--mono); font-size: 11px; color: var(--subtle); }
+      section { padding: 64px 0; border-top: 1px solid var(--border); scroll-margin-top: 80px; }
+      h2 { font-family: var(--display); font-size: clamp(28px, 4vw, 40px); margin: 0 0 8px; }
+      .section-lede { color: var(--muted); font-size: 16px; max-width: 58ch; margin: 0 0 28px; }
+      .roles {
+        display: grid; gap: 10px;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 700px) {
+        .roles { grid-template-columns: repeat(2, 1fr); }
+      }
+      @media (min-width: 960px) {
+        .roles { grid-template-columns: repeat(6, 1fr); }
+        .role { grid-column: span 2; }
+        .roles .role:nth-child(4),
+        .roles .role:nth-child(5) { grid-column: span 3; }
+      }
+      .role {
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 18px 20px;
+      }
+      .role .who {
+        font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--subtle); margin: 0;
+      }
+      .role h3 { font-family: var(--display); font-size: 26px; margin: 6px 0 12px; }
+      .role dl { margin: 0; }
+      .role dt {
+        font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--subtle); margin-top: 10px;
+      }
+      .role dt:first-child { margin-top: 0; }
+      .role dd { margin: 4px 0 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+      .steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+      .steps li {
+        display: grid; grid-template-columns: 40px 1fr; gap: 16px; align-items: start;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 16px 18px;
+      }
+      .steps li::before {
+        counter-increment: step; content: counter(step);
+        font-family: var(--mono); font-size: 12px; color: var(--subtle);
+        width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;
+        border: 1px solid var(--border); border-radius: var(--radius-sm);
+      }
+      .steps strong { display: block; font-weight: 500; font-size: 15px; }
+      .steps span { display: block; color: var(--muted); font-size: 14px; margin-top: 4px; }
       table { width: 100%; border-collapse: collapse; font-size: 14px; }
-      th { text-align: left; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--subtle); font-weight: 500; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-      td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      th {
+        text-align: left; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+        color: var(--subtle); font-weight: 500; padding: 10px 16px 10px 0;
+        border-bottom: 1px solid var(--border);
+      }
+      td { padding: 14px 16px 14px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
       td:first-child { font-weight: 500; }
       .muted { color: var(--muted); }
-      .journeys { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
-      pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow: auto; font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--fg); }
-      footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+      .stops { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+      .stops li {
+        display: flex; gap: 12px; align-items: flex-start;
+        background: var(--surface); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 14px 16px; font-size: 14px;
+      }
+      .stops li::before { content: "—"; color: var(--subtle); font-family: var(--mono); }
+      .run-block { position: relative; }
+      pre {
+        background: var(--surface-2); border: 1px solid var(--border);
+        border-radius: var(--radius); padding: 20px 88px 20px 18px;
+        overflow: auto; font-family: var(--mono); font-size: 13px;
+        line-height: 1.65; color: var(--fg); margin: 0 0 28px;
+      }
+      .copy {
+        position: absolute; top: 12px; right: 12px;
+        min-height: 36px; padding: 0 12px;
+        border-radius: var(--radius-sm); border: 1px solid var(--border);
+        background: var(--surface); color: var(--fg); font-size: 12px;
+      }
+      .note { color: var(--muted); font-size: 14px; margin-top: 16px; max-width: 62ch; }
+      .note a { text-decoration: underline; text-underline-offset: 3px; }
+      footer {
+        border-top: 1px solid var(--border); padding: 28px 0 48px;
+        color: var(--muted); font-size: 13px;
+      }
+      .foot {
+        display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+        align-items: center;
+      }
+      .foot-links { display: flex; flex-wrap: wrap; gap: 8px 16px; }
+      .foot-links a { min-height: 44px; display: inline-flex; align-items: center; }
+      footer a { text-decoration: none; }
+      footer a:hover { color: var(--fg); }
       @media (max-width: 800px) {
-        .grid3, .principles, .journeys { grid-template-columns: 1fr; }
-        nav { display: none; }
-        h1 { font-size: 48px; }
+        .grid3 { grid-template-columns: 1fr; }
+        h1 { font-size: 36px; }
+        .hero { padding-top: 36px; }
+        .nav-wide { display: none; }
+        nav a { padding: 0 8px; }
+        pre { padding-right: 18px; padding-top: 52px; }
+        .expect thead { display: none; }
+        .expect tr {
+          display: block;
+          background: var(--surface);
+          border: 1px solid var(--border);
+          border-radius: var(--radius);
+          padding: 14px 16px;
+          margin-bottom: 8px;
+        }
+        .expect td {
+          display: block; border: 0; padding: 0;
+        }
+        .expect td:first-child { padding-bottom: 6px; }
+        .expect td.muted::before {
+          content: "Expect — ";
+          color: var(--subtle);
+          font-size: 11px;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html { scroll-behavior: auto; }
       }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <header>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="top">
+      <div class="wrap top-inner">
         <a class="brand" href="./">
           <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
             <circle cx="16" cy="16" r="13.5" stroke="#C5CDD6" stroke-width="1" opacity="0.35" />
@@ -82,193 +279,249 @@
           </svg>
           <span>Fovea</span>
         </a>
-        <nav>
-          <a href="#principles">Principles</a>
-          <a href="#journeys">Journeys</a>
-          <a href="#run">Run</a>
+        <nav aria-label="Primary">
+          <a href="#roles">Roles</a>
+          <a class="nav-wide" href="#hour">First hour</a>
+          <a class="nav-wide" href="#guardrails">Guardrails</a>
           <a href="https://github.com/salahuddinuqaili/fovea">Source</a>
+          <a class="btn" href="#run">Run it</a>
         </nav>
-      </header>
+      </div>
+    </header>
 
+    <main id="main" class="wrap">
       <div class="hero">
-        <div class="kicker">Open-source Agentic OS · Apache-2.0 · v12.0</div>
-        <h1>Accuracy at the center.</h1>
+        <p class="kicker">Apache-2.0 · v12 · TypeScript</p>
+        <h1>The control plane between analysts, models, and the warehouse.</h1>
         <p class="lede">
-          Fovea is the governed operating layer between people, models, warehouses, and production systems.
-          You do not need to understand the kernel. Act as Maya, ask a named question, and read the evidence pane.
-          It answers with evidence, or it stops.
+          For analytics, security, and audit. Named metrics come back with SQL and provenance.
+          Vague names abstain. Writes need an exact-hash approval. Production does not run from a prompt.
+          There is no admin who can do everything, and no global autonomous switch.
         </p>
         <div class="actions">
-          <a class="btn" href="https://github.com/salahuddinuqaili/fovea">Get the source</a>
-          <a class="btn ghost" href="https://github.com/salahuddinuqaili/fovea/blob/main/README.md">Read the README</a>
+          <a class="btn" href="#run">Run it locally</a>
+          <a class="btn ghost" href="https://github.com/salahuddinuqaili/fovea">View the source</a>
         </div>
+        <ul class="route">
+          <li><a href="#hour"><span>Analytics</span>First hour</a></li>
+          <li><a href="#guardrails"><span>Security</span>Hard stops</a></li>
+          <li><a href="#roles"><span>Every desk</span>Who can do what</a></li>
+        </ul>
+        <figure class="shot">
+          <img
+            src="desk.png"
+            width="1280"
+            height="720"
+            alt="Analyst desk after asking for north-star revenue last week: $1,510,880, SQL, and provenance."
+          />
+          <figcaption>
+            The analyst desk. A named metric returns the number, the SQL, and provenance — not a guessed definition.
+          </figcaption>
+        </figure>
         <div class="grid3">
-          <div class="card">
-            <div class="k">Reads</div>
-            <h3>Autonomous</h3>
-            <p>Named canonical metrics, validated SQL, provenance on every material result.</p>
-          </div>
-          <div class="card">
-            <div class="k">Writes</div>
+          <article class="card">
+            <p class="k">Reads</p>
+            <h3>Evidence or stop</h3>
+            <p>A canonical metric returns a number, the query, and provenance. If the name is ambiguous, Fovea refuses to guess. That is success.</p>
+          </article>
+          <article class="card">
+            <p class="k">Writes</p>
             <h3>Hash-bound</h3>
-            <p>Approvals mint a credential scoped to <code>sandbox.*</code>. Replays are idempotent.</p>
-          </div>
-          <div class="card">
-            <div class="k">Policy</div>
+            <p>An approver who is not the requester decides an exact action hash. A short-lived credential may run in sandbox. Production stays gated.</p>
+          </article>
+          <article class="card">
+            <p class="k">Policy</p>
             <h3>Intersection</h3>
-            <p>Lower layers cannot widen. Tool output, READMEs, and tickets are data — not policy.</p>
-          </div>
+            <p>Permissions never union across roles. Tool output, tickets, and READMEs are data — not policy. A grant is one person, one tool, one task.</p>
+          </article>
         </div>
       </div>
 
-      <section id="principles">
-        <h2>Principles that will not be reopened casually</h2>
-        <div class="principles">
-          <ol>
-            <li><span class="num">01</span>The OS is the control plane, not the UI.</li>
-            <li><span class="num">02</span>User-invoked permissions use intersection, never union.</li>
-            <li><span class="num">03</span>Personal memory is isolated.</li>
-            <li><span class="num">04</span>Arbitrary tools and plugins are not allowed.</li>
-            <li><span class="num">05</span>Agents cannot deploy their own modifications.</li>
-            <li><span class="num">06</span>Production runs only signed, verified artifacts.</li>
-            <li><span class="num">07</span>Tool output is untrusted data, not policy.</li>
-            <li><span class="num">08</span>Abstention is a success state.</li>
-            <li><span class="num">09</span>Stage progression is evidence-driven.</li>
-          </ol>
-        </div>
-      </section>
-
-      <section id="journeys">
-        <h2>Operator journeys we simulate</h2>
-        <div class="journeys">
-          <article class="card">
-            <div class="k">Maya · analyst</div>
-            <h3 style="font-size:22px">Morning desk</h3>
-            <p>Vague “revenue” abstains. Named canonical metrics return evidence, citations, and a next action.</p>
+      <section id="roles">
+        <h2>Who can do what</h2>
+        <p class="section-lede">
+          The header is a desk, not a login. There is no SSO in this tree.
+          Permissions intersect. They never union.
+        </p>
+        <div class="roles">
+          <article class="role">
+            <p class="who">Analyst · Maya Chen</p>
+            <h3>Ask and propose</h3>
+            <dl>
+              <dt>Can</dt>
+              <dd>Ask named metrics, investigate dips, propose sandbox writes, plan backfills.</dd>
+              <dt>Cannot</dt>
+              <dd>Approve a write, issue a grant, or read the org audit stream.</dd>
+            </dl>
           </article>
-          <article class="card">
-            <div class="k">Maya · analyst</div>
-            <h3 style="font-size:22px">Incident afternoon</h3>
-            <p>One question pulls three canonical metrics, notes a failed <code>fct_orders</code> run, and refuses to claim causation. Copy or download the evidence pack.</p>
+          <article class="role">
+            <p class="who">Approver · Jordan Hale</p>
+            <h3>Decide the hash</h3>
+            <dl>
+              <dt>Can</dt>
+              <dd>Decide the exact action hash and mint a short-lived sandbox credential.</dd>
+              <dt>Cannot</dt>
+              <dd>Approve a write they requested.</dd>
+            </dl>
           </article>
-          <article class="card">
-            <div class="k">Maya → Jordan</div>
-            <h3 style="font-size:22px">Sandbox write</h3>
-            <p>Proposal binds a hash. Analysts cannot approve. A short-lived credential executes once; replay adds no rows.</p>
+          <article class="role">
+            <p class="who">Security · Sam Okonkwo</p>
+            <h3>Kill and grant</h3>
+            <dl>
+              <dt>Can</dt>
+              <dd>Flip kill switches. Issue or revoke named grants.</dd>
+              <dt>Cannot</dt>
+              <dd>Act as a hidden super-approver.</dd>
+            </dl>
           </article>
-          <article class="card">
-            <div class="k">Adversarial</div>
-            <h3 style="font-size:22px">Injection day</h3>
-            <p>Prompt injections, README instructions, and cross-user memory probes are refused. Unsigned releases cannot load.</p>
+          <article class="role">
+            <p class="who">Auditor · Riley Park</p>
+            <h3>Read the stream</h3>
+            <dl>
+              <dt>Can</dt>
+              <dd>Read the append-only audit stream.</dd>
+              <dt>Cannot</dt>
+              <dd>Issue grants or decide writes.</dd>
+            </dl>
           </article>
-          <article class="card">
-            <div class="k">Riley · auditor</div>
-            <h3 style="font-size:22px">Audit shift</h3>
-            <p>The append-only stream is role-gated. Maya cannot read it. Riley can.</p>
-          </article>
-          <article class="card">
-            <div class="k">Maya → Jordan</div>
-            <h3 style="font-size:22px">Backfill plan</h3>
-            <p>Adapters compute blast radius, cost, and rollback. Production execution stays disabled.</p>
-          </article>
-          <article class="card">
-            <div class="k">Maya · Alex</div>
-            <h3 style="font-size:22px">No global switch</h3>
-            <p>“Enable autonomous mode” is refused. Stage D is a named grant: one tool, one task, a risk ceiling. Wildcards are denied.</p>
-          </article>
-          <article class="card">
-            <div class="k">Live warehouse</div>
-            <h3 style="font-size:22px">Gated adapter</h3>
-            <p>Registered, not on Maya’s allowlist, no DSN in the demo. Writes stay disabled even if a DSN appears.</p>
-          </article>
-          <article class="card">
-            <div class="k">Maya → Alex</div>
-            <h3 style="font-size:22px">Grant desk</h3>
-            <p>Maya cannot issue a named grant. Alex can. Wildcards and writes are denied. The grant never promotes Stage D.</p>
-          </article>
-          <article class="card">
-            <div class="k">Alex → Maya</div>
-            <h3 style="font-size:22px">Grant lifecycle</h3>
-            <p>The grant covers Maya’s named metric. A duplicate is refused. Revoke ends coverage. Eight-hour TTL. Stage D stays unpromoted.</p>
-          </article>
-          <article class="card">
-            <div class="k">Alex → Maya</div>
-            <h3 style="font-size:22px">Grant continuation</h3>
-            <p>Once covered, Maya’s named metric continues with sibling canonical reads in the same task. Writes stay hash-bound. Incident and backfill do not auto-execute.</p>
-          </article>
-          <article class="card">
-            <div class="k">Maya’s desk</div>
-            <h3 style="font-size:22px">Grant visible</h3>
-            <p>Command and Work show the covering grant before she asks. Continued answers stay scannable. Evidence lists every query. There is no global switch.</p>
-          </article>
-          <article class="card">
-            <div class="k">Alex · kernel</div>
-            <h3 style="font-size:22px">Honest control plane</h3>
-            <p>The running kernel wins when the snapshot lags. Issued grants show on Alex’s desk. Next actions switch to Maya — they do not run as Alex. Pending execute is denied.</p>
-          </article>
-          <article class="card">
-            <div class="k">Maya → Jordan</div>
-            <h3 style="font-size:22px">Named desks</h3>
-            <p>Work stays this session. Maya’s write hands off to Jordan’s inbox. Alex cannot approve it. Denied writes are not queued. Maya’s Command is her desk; Riley’s is the stream.</p>
-          </article>
-          <article class="card">
-            <div class="k">Memory · sandbox</div>
-            <h3 style="font-size:22px">Honest storage</h3>
-            <p>Personal notes are encrypted at rest. Team memory is scoped. UPDATE/DELETE need WHERE. The unowned snapshot does not keep sandbox SQL.</p>
-          </article>
-          <article class="card">
-            <div class="k">Every desk</div>
-            <h3 style="font-size:22px">Desk stays put</h3>
-            <p>A named handoff is a banner, not a replacement. Maya still sees four-click first run. Labels face the recipient: Write from Maya, Named grant from Alex.</p>
-          </article>
-          <article class="card">
-            <div class="k">Maya ← Jordan</div>
-            <h3 style="font-size:22px">Work follows the write</h3>
-            <p>Jordan approves the hash. Maya’s Work thread becomes executed. A decision handoff lands on her desk. It does not stay on needs_approval.</p>
+          <article class="role">
+            <p class="who">OS owner · Alex Voss</p>
+            <h3>Release and revoke</h3>
+            <dl>
+              <dt>Can</dt>
+              <dd>Issue and revoke grants. Run evals and signed releases.</dd>
+              <dt>Cannot</dt>
+              <dd>Approve the analyst’s write.</dd>
+            </dl>
           </article>
         </div>
       </section>
 
-      <section>
-        <h2>Demo principals</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Person</th>
-              <th>Role</th>
-              <th>Try</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr><td>Maya Chen</td><td class="muted">Analyst</td><td class="muted">Ask metrics, investigate dips, propose sandbox writes, plan backfills</td></tr>
-            <tr><td>Jordan Hale</td><td class="muted">Approver</td><td class="muted">Decide exact-hash approvals; mint sandbox credentials</td></tr>
-            <tr><td>Sam Okonkwo</td><td class="muted">Security owner</td><td class="muted">Kill switches; issue or revoke grants</td></tr>
-            <tr><td>Riley Park</td><td class="muted">Auditor</td><td class="muted">Audit stream</td></tr>
-            <tr><td>Alex Voss</td><td class="muted">OS owner</td><td class="muted">Issue and revoke named grants; evals, simulations, releases</td></tr>
-          </tbody>
-        </table>
+      <section id="hour">
+        <h2>The first hour</h2>
+        <p class="section-lede">
+          Sit as the analyst. If these four things happen, the control plane is working.
+          The in-app Guide has the rest of the operator walkthrough.
+        </p>
+        <ol class="steps">
+          <li>
+            <div>
+              <strong>Ask a named metric</strong>
+              <span>“What was north-star revenue last week?” returns a supported number, the SQL, and provenance.</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>Ask something vague</strong>
+              <span>“How is revenue doing?” abstains. More than one definition exists. Fovea will not pick one.</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>Propose a sandbox write</strong>
+              <span>The analyst cannot approve their own hash. The approver mints a short-lived sandbox credential. Replay adds no rows. Production tables stay out of scope.</span>
+            </div>
+          </li>
+          <li>
+            <div>
+              <strong>Issue a named grant — then revoke it</strong>
+              <span>Only the OS owner or security owner can. One person, one tool, one task, a risk ceiling. Matching reads may continue. Writes stay hash-bound. The grant never becomes a global switch.</span>
+            </div>
+          </li>
+        </ol>
+      </section>
+
+      <section id="guardrails">
+        <h2>Hard stops</h2>
+        <p class="section-lede">Product rules, not UI copy. A confident wrong number is a failure. A refusal is not.</p>
+        <ul class="stops">
+          <li>Ambiguous metrics abstain. Named canonical metrics only.</li>
+          <li>Production writes and backfill execution stay disabled.</li>
+          <li>Approvals bind an exact action hash. The requester cannot self-approve.</li>
+          <li>Unsigned or tampered releases cannot load. There is no skip-signature path.</li>
+          <li>Personal memory is isolated and never written to the unowned snapshot.</li>
+          <li>There is no global autonomous switch — not in this version, not later.</li>
+        </ul>
+        <p class="note">Not in this tree: SSO, a live warehouse DSN, production execution, arbitrary plugins.</p>
       </section>
 
       <section id="run">
-        <h2>Run locally</h2>
-        <pre>git clone https://github.com/salahuddinuqaili/fovea
+        <h2>Run it</h2>
+        <p class="section-lede">Node 22. No account. You sit at the analyst desk. Open Guide in the app, or press ⌘K, if you get lost.</p>
+        <div class="run-block">
+          <button class="copy" type="button" aria-label="Copy install commands" data-copy="git clone https://github.com/salahuddinuqaili/fovea
+cd fovea
+npm install
+npm test
+npm run dev">Copy</button>
+          <pre id="install">git clone https://github.com/salahuddinuqaili/fovea
 cd fovea
 npm install
 npm test
 npm run dev</pre>
-        <p class="muted" style="margin-top:16px">
-          Requires Node 22. Open the app — you are Maya Chen. No account is required.
-          Ask north-star revenue, then “Investigate the dip last week.” Propose a sandbox write as Maya, approve as Jordan.
-          Switch to Alex Voss, issue a named grant, ask north-star as Maya — sibling canonical reads continue — then revoke. Production tables stay blocked. Read the in-app operator guide after Command loads.
+        </div>
+        <table class="expect">
+          <thead>
+            <tr>
+              <th>You type</th>
+              <th>You should see</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>What was north-star revenue last week?</td>
+              <td class="muted">A supported number, the SQL, and provenance.</td>
+            </tr>
+            <tr>
+              <td>How is revenue doing?</td>
+              <td class="muted">Abstention. “Revenue” maps to more than one definition.</td>
+            </tr>
+            <tr>
+              <td>Enable autonomous mode for everyone.</td>
+              <td class="muted">Refused. There is no global switch.</td>
+            </tr>
+            <tr>
+              <td>A sandbox INSERT, then switch to the approver.</td>
+              <td class="muted">Needs approval. The hash is decided. The analyst’s thread follows the write.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note">
+          Critical eval failures block a release. You cannot average them away.
+          See
+          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/SECURITY.md">Security</a>,
+          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/ROADMAP.md">Roadmap</a>, and
+          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/CONTRIBUTING.md">Contributing</a>.
         </p>
       </section>
+    </main>
 
-      <footer>
+    <footer>
+      <div class="wrap foot">
         <div>Fovea · Apache License 2.0 · Accuracy at the center.</div>
-        <div>
-          <a href="https://github.com/salahuddinuqaili/fovea">github.com/salahuddinuqaili/fovea</a>
+        <div class="foot-links">
+          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/SECURITY.md">Security</a>
+          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/ROADMAP.md">Roadmap</a>
+          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/CONTRIBUTING.md">Contributing</a>
+          <a href="https://github.com/salahuddinuqaili/fovea">Source</a>
         </div>
-      </footer>
-    </div>
+      </div>
+    </footer>
+    <script>
+      document.querySelectorAll(".copy").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const text = btn.getAttribute("data-copy") || "";
+          try {
+            await navigator.clipboard.writeText(text);
+            btn.textContent = "Copied";
+          } catch {
+            btn.textContent = "Copy failed";
+          }
+          window.setTimeout(() => {
+            btn.textContent = "Copy";
+          }, 1600);
+        });
+      });
+    </script>
   </body>
 </html>
