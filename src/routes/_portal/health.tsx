@@ -22,6 +22,9 @@ function HealthPage() {
     onError: (e: Error) => toast.error(e.message),
   });
   const h = q.data;
+  const live = h?.warehouses?.find((w) => w.id === "live");
+  const liveConnected = Boolean(live?.connected);
+  const liveWritesOff = live?.writes === "disabled";
 
   return (
     <div>
@@ -31,20 +34,16 @@ function HealthPage() {
         description="Revocation does not require a source deployment. Switch to Sam Okonkwo (security) to use the kill switches."
       />
       <div className="grid gap-4 p-4 md:grid-cols-3 md:p-8">
-        <Card k="OS" v={h?.os ?? "—"} ok={h?.os === "up"} />
-        <Card k="Write plane" v={h?.writePlane ?? "—"} ok={h?.writePlane !== "disabled"} />
-        <Card k="Pending approvals" v={String(h?.pendingApprovals ?? 0)} ok />
-        <Card
-          k="KMS"
-          v={h?.kms?.ok ? "Verified" : "Blocked"}
-          ok={Boolean(h?.kms?.ok)}
-        />
+        <Card k="OS" v={h?.os ?? "—"} tone={h?.os === "up" ? "ok" : "danger"} />
+        <Card k="Write plane" v={h?.writePlane ?? "—"} tone={h?.writePlane !== "disabled" ? "ok" : "danger"} />
+        <Card k="Pending approvals" v={String(h?.pendingApprovals ?? 0)} tone="ok" />
+        <Card k="KMS" v={h?.kms?.ok ? "Verified" : "Blocked"} tone={h?.kms?.ok ? "ok" : "danger"} />
         <Card
           k="Live warehouse"
-          v={h?.warehouses?.find((w) => w.id === "live")?.connected ? "Connected" : "Gated"}
-          ok={h?.warehouses?.find((w) => w.id === "live")?.writes === "disabled"}
+          v={liveConnected ? "Connected" : "Gated"}
+          tone={!liveWritesOff ? "danger" : liveConnected ? "ok" : "warn"}
         />
-        <Card k="Selected grants" v={String(h?.grants?.length ?? 0)} ok />
+        <Card k="Selected grants" v={String(h?.grants?.length ?? 0)} tone="ok" />
       </div>
       <div className="flex flex-wrap gap-2 px-4 md:px-8">
         <Button variant="secondary" onClick={() => mut.mutate({ writePlane: true })}>
@@ -88,13 +87,14 @@ function HealthPage() {
   );
 }
 
-function Card({ k, v, ok }: { k: string; v: string; ok: boolean }) {
+function Card({ k, v, tone }: { k: string; v: string; tone: "ok" | "warn" | "danger" }) {
+  const label = tone === "ok" ? "healthy" : tone === "warn" ? "gated" : "degraded";
   return (
     <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-4">
       <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">{k}</div>
       <div className="mt-2 font-display text-3xl">{v}</div>
-      <Badge className="mt-2" tone={ok ? "ok" : "danger"}>
-        {ok ? "healthy" : "degraded"}
+      <Badge className="mt-2" tone={tone}>
+        {label}
       </Badge>
     </div>
   );

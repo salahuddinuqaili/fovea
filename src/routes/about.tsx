@@ -24,6 +24,7 @@ const JOURNEYS = [
   { title: "Backfill plan", body: "Downstream impact and cost are computed. Production execution stays disabled." },
   { title: "Autonomy switch", body: "Enable autonomous mode is refused. Stage D is a named grant, never a wildcard." },
   { title: "Live warehouse", body: "The adapter is registered and gated. No DSN, no principal allowlist, writes disabled." },
+  { title: "Grant desk", body: "Alex issues a named grant. Maya cannot. The grant is stored and does not promote Stage D." },
 ];
 
 function AboutPage() {
@@ -42,7 +43,7 @@ function AboutPage() {
         </Link>
       </header>
       <main className="mx-auto max-w-5xl px-5 pb-24">
-        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v3.0</p>
+        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v4.0</p>
         <h1 className="mt-3 max-w-3xl font-display text-5xl leading-tight tracking-tight md:text-7xl">
           Accuracy at the center.
         </h1>
@@ -81,8 +82,8 @@ function AboutPage() {
           <h2 className="font-display text-3xl">Run it</h2>
           <p className="mt-3 max-w-xl text-sm text-muted">
             Switch demo principals in the header. Ask Maya for north-star revenue, then investigate the dip.
-            Propose a sandbox write. Approve as Jordan. Copy the evidence pack. Unsigned releases will not load.
-            Apache-2.0.
+            Propose a sandbox write. Approve as Jordan. Copy or download the evidence pack. As Alex, issue a named
+            grant from Policy. Unsigned releases will not load. Apache-2.0.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link

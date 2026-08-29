@@ -3,6 +3,38 @@ import type { AutonomyGrant, Principal, RiskTier } from "./types.ts";
 
 const WILDCARD = (value: string) => value === "*" || value === "all" || value === "any";
 
+const NAMES: Record<string, string> = {
+  maya: "prin_maya",
+  jordan: "prin_jordan",
+  sam: "prin_sam",
+  riley: "prin_riley",
+  alex: "prin_alex",
+};
+
+export function parseGrantRequest(text: string): {
+  principalId: string;
+  tool: string;
+  task: string;
+  actions: string[];
+  maxRisk: RiskTier;
+  wildcard: boolean;
+} | null {
+  const m = text.trim().match(/^grant\s+([a-z]+)\s+(\S+)\s+for\s+([a-z0-9._*-]+)/i);
+  if (!m) return null;
+  const principalId = NAMES[m[1].toLowerCase()];
+  if (!principalId) return null;
+  const tool = m[2];
+  const task = m[3].replace(/[.,]$/, "");
+  return {
+    principalId,
+    tool,
+    task,
+    actions: ["read"],
+    maxRisk: 2,
+    wildcard: WILDCARD(tool) || WILDCARD(task),
+  };
+}
+
 export function shadowStageD(grant: AutonomyGrant): {
   candidateStage: "D";
   eligible: boolean;

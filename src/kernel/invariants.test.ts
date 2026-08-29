@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("3.0.0");
+    const report = await runEvalSuite("4.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,9 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all eight journeys pass", async () => {
+  it("all nine journeys pass", async () => {
     const report = await runOperatorSimulations();
-    assert.equal(report.simulations.length, 8);
+    assert.equal(report.simulations.length, 9);
     assert.equal(
       report.passed,
       true,
@@ -290,5 +290,45 @@ describe("v3 kms grants and live warehouse", () => {
       assert.equal(shadowStageD(named.grant).promoted, false);
     }
     assert.equal(autonomySet("D").tools.includes("*"), false);
+  });
+});
+
+describe("v4 grant desk", () => {
+  it("parses a named grant and refuses an analyst", async () => {
+    const { parseGrantRequest, issueGrant, shadowStageD } = await import("./grants.ts");
+    const parsed = parseGrantRequest("Grant Maya warehouse.query for investigate-metric.");
+    assert.ok(parsed);
+    assert.equal(parsed?.principalId, "prin_maya");
+    assert.equal(parsed?.tool, "warehouse.query");
+    assert.equal(parsed?.wildcard, false);
+    const store = new KernelStore();
+    const maya = store.principal("prin_maya")!;
+    const alex = store.principal("prin_alex")!;
+    assert.equal(issueGrant(maya, parsed!).ok, false);
+    const issued = issueGrant(alex, parsed!);
+    assert.equal(issued.ok, true);
+    if (issued.ok) {
+      assert.equal(shadowStageD(issued.grant).promoted, false);
+    }
+  });
+
+  it("Alex can issue from Work; Maya cannot; live warehouse stays gated", async () => {
+    const store = new KernelStore();
+    const asMaya = await runWork(store, {
+      principalId: "prin_maya",
+      message: "Grant Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(asMaya.status, "refused");
+    const asAlex = await runWork(store, {
+      principalId: "prin_alex",
+      message: "Grant Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(asAlex.status, "completed");
+    assert.equal(store.state.grants.length, 1);
+    const live = await runWork(store, {
+      principalId: "prin_alex",
+      message: "Connect the live warehouse.",
+    });
+    assert.equal(live.status, "refused");
   });
 });

@@ -53,6 +53,7 @@ function GuidePage() {
             <li>Maya cannot approve her own write. Jordan can, bound to the hash.</li>
             <li>Production tables and backfill execution stay disabled.</li>
             <li>“Enable autonomous mode” — there is no global switch. Grants are per-tool, per-task, per-risk.</li>
+            <li>Maya cannot issue a grant. Switch to Alex Voss. The grant never promotes Stage D.</li>
             <li>“Connect the live warehouse” — registered, not on Maya’s allowlist. Fixture stays the read path.</li>
             <li>Another person’s personal notes are never readable.</li>
             <li>Session budget exhausted — close the session or stop spending.</li>
@@ -66,13 +67,13 @@ function GuidePage() {
             <Person n="Jordan Hale" r="Approver" d="Decide the exact hash. Mint the sandbox credential." />
             <Person n="Sam Okonkwo" r="Security" d="Kill switches on Health." />
             <Person n="Riley Park" r="Auditor" d="Read the append-only event stream." />
-            <Person n="Alex Voss" r="OS owner" d="Evals, simulations, signed releases." />
+            <Person n="Alex Voss" r="OS owner" d="Issue a named grant from Policy or Work. Evals, simulations, releases." />
           </dl>
         </section>
 
         <p className="text-xs text-subtle">
-          Press ⌘K anywhere to jump, switch principal, or run a playbook. Copy the evidence pack from a completed
-          result when you need to paste the claim elsewhere.
+          Press ⌘K anywhere to jump, switch principal, or run a playbook. Copy or download the evidence pack from a
+          completed result when you need to paste the claim elsewhere.
         </p>
       </div>
     </div>

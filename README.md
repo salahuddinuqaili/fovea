@@ -31,8 +31,10 @@ Press **⌘K** (or **Ctrl+K**) any time you feel lost. Pick “Operator guide”
 | --- | --- |
 | *What was north-star revenue last week?* | A **supported** number, the SQL, and provenance. |
 | *How is revenue doing?* | **Abstention.** “Revenue” maps to more than one definition. That is success. |
-| *Investigate the dip last week.* | An **incident brief** across three canonical metrics. It will not claim the pipeline *caused* the dip. Copy the **evidence pack** from the right-hand pane if you want the JSON. |
+| *Investigate the dip last week.* | An **incident brief** across three canonical metrics. It will not claim the pipeline *caused* the dip. Copy or download the **evidence pack** from the right-hand pane. |
 | *Enable autonomous mode for everyone.* | **Refused.** There is no global switch. |
+| *Grant Maya warehouse.query for investigate-metric.* as Maya | **Refused.** Only the OS owner can issue a named grant. |
+| Same line as **Alex Voss** | A **named grant** is stored. Shadow Stage D stays `promoted=false`. |
 | *Connect the live warehouse.* | **Gated.** The adapter is registered. Maya cannot arm it. Writes stay disabled. |
 | The sandbox `INSERT` from Command (or ⌘K → Sandbox write) | **Needs approval.** Maya cannot approve her own write. |
 | Then switch the header to **Jordan Hale** and approve | A short-lived sandbox credential. One row. Replay does nothing. |
@@ -54,7 +56,8 @@ That’s the first run. If those things happen, Fovea is working.
 | Riley can see Audit, Maya cannot | Role intersection, not a bug. | Act as Riley to read the stream. |
 | Budget exhausted | The $25 demo session is spent. | Ask “Close the session.” Reads after that still need remaining budget. |
 | Production `INSERT` never runs | Correct. Stage B/C demo. | Sandbox writes run after approval. Production stays gated. |
-| “Enable autonomous mode” refused | There is no global switch. | Grants would have to name one tool, one task, one risk ceiling. |
+| “Enable autonomous mode” refused | There is no global switch. | Switch to **Alex Voss** and issue a named grant (one tool, one task, a risk ceiling). |
+| Maya cannot issue a grant | Correct. Analysts do not mint Stage D. | Header → **Alex Voss** → Policy, or type the grant line in Work. |
 | “Connect the live warehouse” gated | The live adapter is not on Maya’s allowlist. | Ask a named metric. The fixture is still the read path. |
 
 A confident wrong number is a failure. A refusal is not.
@@ -71,19 +74,20 @@ The header switcher (or **⌘K → Act as**) is not a login. It is whose desk yo
 | Jordan Hale | Approver | Accept or deny the **exact** action hash; mint a sandbox credential |
 | Sam Okonkwo | Security owner | Kill switches (Health) |
 | Riley Park | Auditor | Read the append-only audit stream |
-| Alex Voss | OS owner | Evals, simulations, signed releases |
+| Alex Voss | OS owner | Issue a named grant from Policy or Work; evals, simulations, signed releases |
 
 ---
 
 ## What this version is
 
-**v3.0 — Selected Stage D**
+**v4.0 — Grant desk**
 
-- There is **no global autonomous switch**. “Enable autonomous mode for everyone” is refused.
-- A Stage D grant, if issued, must name one principal, one tool, one task, and a risk ceiling. Wildcards and writes are denied. A grant never promotes itself.
+- Alex Voss (or Sam) can issue a **named Stage D grant**: one person, one tool, one task, a risk ceiling. Maya cannot. Wildcards and writes are denied. The grant **never promotes itself**.
+- There is still **no global autonomous switch**. “Enable autonomous mode for everyone” is refused.
+- Command shows Autonomy and Live warehouse playbooks instead of slicing them away. Work starts with six cards, not a wall of SQL. Incident briefs keep their line breaks. Evidence packs copy **and** download.
 - Releases sign and verify through a **demo KMS**. `--skip-signature-check` does not exist. Raw PEMs are not accepted.
-- A **live warehouse** adapter is registered and policy-gated. This demo has no DSN. Writes stay disabled.
-- Everything from v2.1 still holds: incident briefs, evidence packs, session budget, sandbox writes after exact-hash approval, plan-only backfills, eight operator simulations
+- A **live warehouse** adapter is registered and policy-gated. This demo has no DSN. Writes stay disabled even after a named grant.
+- Nine operator simulations as a release input.
 
 **Not in this version**
 
@@ -114,7 +118,7 @@ migrations/     unowned control snapshot — personal memory is never stored her
 ```
 
 ```bash
-npm test         # invariants, eval hard gates, eight operator simulations
+npm test         # invariants, eval hard gates, nine operator simulations
 npm run typecheck
 ```
 

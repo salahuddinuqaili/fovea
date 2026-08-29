@@ -1,6 +1,7 @@
 import { decideApproval, runWork } from "./orchestrator.ts";
 import { unsigned, verifyRelease, buildRelease, SEED_TREE } from "./release.ts";
 import { KernelStore } from "./store.ts";
+import { shadowStageD } from "./grants.ts";
 
 export interface SimulationStep {
   name: string;
@@ -269,6 +270,49 @@ async function liveWarehouseGated(store: KernelStore): Promise<Omit<SimulationRe
   };
 }
 
+async function grantDesk(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const maya = await runWork(store, {
+    principalId: "prin_maya",
+    message: "Grant Maya warehouse.query for investigate-metric.",
+  });
+  const alex = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Grant Maya warehouse.query for investigate-metric.",
+  });
+  const live = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Connect the live warehouse.",
+  });
+  const wild = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Grant Maya * for investigate-metric.",
+  });
+  const grant = store.state.grants[0];
+  const shadow = grant ? shadowStageD(grant) : null;
+  const steps = [
+    step("maya_refused", maya.status === "refused", maya.status),
+    step("maya_denied", maya.behaviors.includes("grant_denied"), maya.behaviors.join(",")),
+    step("alex_issued", alex.status === "completed" && alex.behaviors.includes("grant_issued"), alex.status),
+    step("stored", Boolean(grant) && grant.tool === "warehouse.query", String(store.state.grants.length)),
+    step("not_promoted", shadow?.promoted === false, shadow ? `promoted=${shadow.promoted}` : "missing"),
+    step("live_still_gated", live.status === "refused" && live.behaviors.includes("live_warehouse_gated"), live.status),
+    step("wildcard_denied", wild.status === "refused", wild.status),
+    step("one_grant", store.state.grants.length === 1, String(store.state.grants.length)),
+  ];
+  const friction: string[] = [];
+  if (maya.status !== "refused") friction.push("Maya was able to issue a grant.");
+  if (shadow?.promoted) friction.push("Named grant self-promoted Stage D.");
+  if (live.status !== "refused") friction.push("Live warehouse was armed after a named grant.");
+  return {
+    id: "sim_grant_desk",
+    title: "Grant desk",
+    persona: "Maya Chen → Alex Voss",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction,
+  };
+}
+
 const RUNNERS = [
   analystMorning,
   sandboxWriteLoop,
@@ -278,6 +322,7 @@ const RUNNERS = [
   incidentAfternoon,
   autonomySwitchRefused,
   liveWarehouseGated,
+  grantDesk,
 ];
 
 export async function runOperatorSimulations(): Promise<{

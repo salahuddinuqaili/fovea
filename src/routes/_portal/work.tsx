@@ -6,10 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
 import { bootstrapFn, listTasksFn, overviewFn, submitWorkFn } from "@/lib/api";
-import { playbooksFor } from "@/lib/playbooks";
+import { featuredPlaybooks, WORK_STARTERS } from "@/lib/playbooks";
 import { useFoveaSession } from "@/lib/session";
 import { cn, formatUsd, shortId } from "@/lib/utils";
-import type { NextAction, WorkResult } from "@/kernel/types";
+import type { EvidencePack, NextAction, WorkResult } from "@/kernel/types";
 import { evidencePackJson } from "@/kernel/evidence";
 
 type Search = { q?: string };
@@ -29,6 +29,7 @@ function WorkPage() {
   const [thread, setThread] = useState<WorkResult[]>([]);
   const [selected, setSelected] = useState<WorkResult | null>(null);
   const autoRan = useRef<string | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
   const boot = useQuery({ queryKey: ["bootstrap"], queryFn: () => bootstrapFn() });
   const overview = useQuery({
@@ -40,7 +41,7 @@ function WorkPage() {
     queryFn: () => listTasksFn({ data: { principalId } }),
   });
   const roles = boot.data?.principals.find((p) => p.id === principalId)?.roles ?? ["analyst"];
-  const books = playbooksFor(roles);
+  const books = featuredPlaybooks(roles, WORK_STARTERS);
 
   useEffect(() => {
     setThread([]);
@@ -74,6 +75,10 @@ function WorkPage() {
     mut.mutate(q);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- auto-run once per q+principal
   }, [q, principalId]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "nearest" });
+  }, [thread.length, mut.isPending, selected?.taskId]);
 
   const follow = (action: NextAction) => {
     const [path, query] = action.href.split("?");
@@ -138,9 +143,16 @@ function WorkPage() {
               <div className="ml-auto w-fit max-w-[90%] rounded-[var(--radius-md)] bg-surface-2 px-4 py-3 text-sm">
                 {item.userRequest}
               </div>
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => setSelected(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelected(item);
+                  }
+                }}
                 className={cn(
                   "block w-full max-w-[95%] rounded-[var(--radius-lg)] border bg-surface p-4 text-left",
                   selected?.taskId === item.taskId ? "border-border-strong" : "border-border",
@@ -151,7 +163,7 @@ function WorkPage() {
                   <Badge>{item.status.replace("_", " ")}</Badge>
                   {item.skillId ? <Badge tone="info">{item.skillId}</Badge> : null}
                 </div>
-                <p className="text-sm leading-relaxed text-fg">{item.answer?.text}</p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">{item.answer?.text}</p>
                 {item.nextAction ? (
                   <div className="mt-3 flex items-center justify-between gap-3 border-t border-border pt-3">
                     <span className="text-xs text-muted">{item.nextAction.hint}</span>
@@ -174,10 +186,11 @@ function WorkPage() {
                     </span>
                   </div>
                 ) : null}
-              </button>
+              </div>
             </article>
           ))}
           {mut.isPending ? <p className="text-sm text-muted">Evaluating policy, then retrieving evidence…</p> : null}
+          <div ref={bottomRef} />
         </div>
         <form
           className="border-t border-border p-4"
@@ -254,24 +267,32 @@ function EvidencePane({
         </button>
       ) : null}
       {result.evidencePack ? (
-        <button
-          type="button"
-          className="mt-3 w-full rounded-[var(--radius-md)] border border-border bg-bg px-4 py-3 text-left"
-          onClick={() => {
-            const json = evidencePackJson(result.evidencePack!);
-            void navigator.clipboard.writeText(json).then(
-              () => toast.success("Evidence pack copied."),
-              () => toast.message(json.slice(0, 180)),
-            );
-          }}
-        >
+        <div className="mt-3 rounded-[var(--radius-md)] border border-border bg-bg px-4 py-3">
           <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">Evidence pack</div>
           <div className="mt-1 font-mono text-[11px] text-muted">
             {result.evidencePack.claimClass} · {result.evidencePack.metrics.length} metrics ·{" "}
             {result.evidencePack.queryHashes.length} queries · {shortId(result.evidencePack.outputHash, 10)}
           </div>
-          <div className="mt-1 text-xs text-muted">Copy JSON. The claim, citations, and hashes travel together.</div>
-        </button>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                const json = evidencePackJson(result.evidencePack!);
+                void navigator.clipboard.writeText(json).then(
+                  () => toast.success("Evidence pack copied."),
+                  () => toast.message(json.slice(0, 180)),
+                );
+              }}
+            >
+              Copy JSON
+            </Button>
+            <Button type="button" size="sm" variant="secondary" onClick={() => downloadEvidence(result.evidencePack!)}>
+              Download
+            </Button>
+          </div>
+        </div>
       ) : null}
       <Section title="Policy">
         {result.policy.map((p, i) => (
@@ -363,6 +384,18 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       <div className="space-y-2">{children}</div>
     </section>
   );
+}
+
+function downloadEvidence(pack: EvidencePack) {
+  const json = evidencePackJson(pack);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${pack.resultId}.evidence.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast.success("Evidence pack downloaded.");
 }
 
 function Field({ k, v }: { k: string; v: string }) {

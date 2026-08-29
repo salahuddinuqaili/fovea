@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { bootstrapFn, overviewFn } from "@/lib/api";
-import { playbooksFor, FIRST_RUN } from "@/lib/playbooks";
+import { FIRST_RUN, COMMAND_FEATURED, featuredPlaybooks } from "@/lib/playbooks";
 import { useFoveaSession } from "@/lib/session";
 import { formatUsd } from "@/lib/utils";
 
@@ -20,7 +20,7 @@ function CommandCenter() {
   const data = q.data;
   const verified = boot.data?.verification.ok ?? data?.verification.ok ?? false;
   const principal = boot.data?.principals.find((p) => p.id === principalId);
-  const books = playbooksFor(principal?.roles ?? ["analyst"]).slice(0, 8);
+  const books = featuredPlaybooks(principal?.roles ?? ["analyst"], COMMAND_FEATURED);
 
   return (
     <div>
@@ -35,7 +35,11 @@ function CommandCenter() {
         }
       />
       <div className="grid gap-4 p-4 md:grid-cols-4 md:p-8">
-        <Stat label="Autonomy" value="Stage B" hint="Sandbox writes after approval" />
+        <Stat
+          label="Autonomy"
+          value="Stage B"
+          hint={`${boot.data?.grants?.length ?? 0} named grants · no global switch`}
+        />
         <Stat
           label="Release"
           value={verified ? "Verified" : "Blocked"}
@@ -49,9 +53,10 @@ function CommandCenter() {
         />
       </div>
 
-      {(data?.allTaskCount ?? 0) === 0 ? (
-        <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
-          <h2 className="text-sm font-medium">Start here — four clicks</h2>
+      <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
+          <h2 className="text-sm font-medium">
+            {(data?.tasks.length ?? 0) === 0 ? "Start here — four clicks" : "Four-click first run"}
+          </h2>
           <ol className="mt-3 grid gap-2 md:grid-cols-2">
             {FIRST_RUN.map((s) => (
               <Link
@@ -67,7 +72,6 @@ function CommandCenter() {
             ))}
           </ol>
         </section>
-      ) : null}
 
       <div className="grid gap-6 px-4 pb-10 md:grid-cols-3 md:px-8">
         <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:col-span-2">

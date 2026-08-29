@@ -126,6 +126,13 @@ export const PLAYBOOKS: Playbook[] = [
     roles: ["analyst", "os_owner", "security_owner"],
   },
   {
+    id: "grant",
+    kicker: "Grant",
+    q: "Grant Maya warehouse.query for investigate-metric.",
+    why: "Named Stage D grant. Alex can issue it; Maya cannot. It never self-promotes.",
+    roles: ["os_owner", "security_owner"],
+  },
+  {
     id: "close",
     kicker: "Session",
     q: "Close the session.",
@@ -137,4 +144,33 @@ export const PLAYBOOKS: Playbook[] = [
 export function playbooksFor(roles: string[]) {
   if (!roles.length) return PLAYBOOKS;
   return PLAYBOOKS.filter((p) => p.roles.some((r) => roles.includes(r)));
+}
+
+/** Command featured set — explicit, not “first eight of the role list”. */
+export const COMMAND_FEATURED = [
+  "northstar",
+  "incident",
+  "abstain",
+  "sandbox",
+  "autonomy",
+  "live",
+  "inject",
+  "backfill",
+  "grant",
+] as const;
+
+/** Work empty-state starters. Six cards, not the full INSERT dump. */
+export const WORK_STARTERS = [
+  "northstar",
+  "incident",
+  "abstain",
+  "sandbox",
+  "autonomy",
+  "live",
+  "grant",
+] as const;
+
+export function featuredPlaybooks(roles: string[], ids: readonly string[]) {
+  const books = playbooksFor(roles);
+  return ids.map((id) => books.find((b) => b.id === id)).filter((b): b is Playbook => Boolean(b));
 }

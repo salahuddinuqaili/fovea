@@ -2,7 +2,7 @@
 
 This is an **open-source Agentic OS** (name: **Fovea**). Continue in place. Do not scaffold a new app.
 
-## Current version: v3.0.0 — Selected Stage D (prod exec still off, Auth still OFF)
+## Current version: v4.0.0 — Grant desk (prod exec still off, Auth still OFF)
 
 Locked defaults:
 
@@ -12,10 +12,11 @@ Locked defaults:
 - Principals remain Stage B. Writes require exact-hash approval.
 - Stage C path: sandbox.* writes after approval + short-lived credential. Production execution disabled.
 - Stage D is selected workflows only: per-tool, per-task, per-risk grants. No global autonomous switch.
+- Alex (OS owner) or Sam (security) can issue a named grant from Policy or Work. Maya cannot. Wildcards, writes, and T4 are denied. A grant never self-promotes.
 - Live warehouse adapter is registered and policy-gated. No DSN in the demo. Writes stay disabled.
 - Releases sign and verify through the demo KMS. `--skip-signature-check` does not exist.
 - Skills: investigate-metric, investigate-incident, write-and-validate-sql, plan-backfill, session-close
-- Operator simulations in `src/kernel/simulations.ts` are a release input.
+- Operator simulations in `src/kernel/simulations.ts` are a release input (nine journeys).
 
 ## Do not reopen
 

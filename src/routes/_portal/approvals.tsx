@@ -41,7 +41,10 @@ function ApprovalsPage() {
       />
       <div className="space-y-3 p-4 md:p-8">
         {(q.data ?? []).length === 0 ? (
-          <p className="text-sm text-muted">No approvals. Propose a sandbox write or plan a backfill from Work.</p>
+          <p className="text-sm text-muted">
+            No approvals. Act as Maya Chen, propose a sandbox write from Work, then switch to Jordan Hale to decide
+            the exact hash.
+          </p>
         ) : (
           q.data!.map((a) => (
             <article key={a.approvalId} className="rounded-[var(--radius-lg)] border border-border bg-surface p-5">
