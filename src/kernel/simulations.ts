@@ -1,4 +1,4 @@
-import { decideApproval, runWork } from "./orchestrator.ts";
+import { decideApproval, followWrite, runWork } from "./orchestrator.ts";
 import { unsigned, verifyRelease, buildRelease, SEED_TREE } from "./release.ts";
 import { KernelStore } from "./store.ts";
 import { coveringGrants, grantContinuesReads, isGrantActive, matchingGrant, shadowStageD } from "./grants.ts";
@@ -710,6 +710,48 @@ async function deskStaysPut(store: KernelStore): Promise<Omit<SimulationResult, 
   };
 }
 
+async function writeFollowed(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const insert =
+    "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'follow')";
+  const propose = await runWork(store, { principalId: "prin_maya", message: insert });
+  const executed = decideApproval(store, {
+    approvalId: propose.approvals[0].approvalId,
+    actorId: "prin_jordan",
+    decision: "approved",
+  });
+  const followed = followWrite(store, store.state.tasks.find((t) => t.taskId === propose.taskId)!);
+  const toMaya = incomingHandoffs(store.state.handoffs, "prin_maya");
+  const denyPropose = await runWork(store, {
+    principalId: "prin_maya",
+    message:
+      "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'deny-follow')",
+  });
+  decideApproval(store, {
+    approvalId: denyPropose.approvals[0].approvalId,
+    actorId: "prin_jordan",
+    decision: "denied",
+  });
+  const denied = followWrite(store, store.state.tasks.find((t) => t.taskId === denyPropose.taskId)!);
+  const steps = [
+    step("executed", executed.execution === "sandbox_executed", executed.execution),
+    step("thread_completed", followed.status === "completed", followed.status),
+    step("write_followed", followed.behaviors.includes("write_followed"), followed.behaviors.join(",")),
+    step("decision_handoff", toMaya.some((h) => h.kind === "decision" && h.label === "Write approved by Jordan"), toMaya.map((h) => h.label).join(",") || "none"),
+    step("denied_refused", denied.status === "refused" && denied.behaviors.includes("write_denied"), denied.status),
+    step("next_cleared", followed.nextAction === null, followed.nextAction?.label ?? "none"),
+  ];
+  return {
+    id: "sim_write_followed",
+    title: "Work follows the write",
+    persona: "Maya Chen → Jordan Hale",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: steps.every((s) => s.passed)
+      ? []
+      : ["The Work thread stayed on needs_approval after Jordan decided, or no decision handoff landed on Maya."],
+  };
+}
+
 const RUNNERS = [
   analystMorning,
   sandboxWriteLoop,
@@ -727,6 +769,7 @@ const RUNNERS = [
   operatorInbox,
   honestStorage,
   deskStaysPut,
+  writeFollowed,
 ];
 
 export async function runOperatorSimulations(): Promise<{

@@ -23,19 +23,16 @@ export const useFoveaSession = create<SessionState>()(
 interface WorkSessionState {
   threads: Record<string, WorkResult[]>;
   selectedId: Record<string, string | null>;
-  consumedQs: string[];
   pushResult: (principalId: string, result: WorkResult) => void;
   selectResult: (principalId: string, taskId: string) => void;
-  markConsumedQ: (q: string) => void;
-  hasConsumedQ: (q: string) => boolean;
+  hydrateThread: (principalId: string, tasks: WorkResult[]) => void;
 }
 
 export const useWorkSession = create<WorkSessionState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       threads: {},
       selectedId: {},
-      consumedQs: [],
       pushResult: (principalId, result) =>
         set((s) => ({
           threads: { ...s.threads, [principalId]: [...(s.threads[principalId] ?? []), result] },
@@ -43,9 +40,28 @@ export const useWorkSession = create<WorkSessionState>()(
         })),
       selectResult: (principalId, taskId) =>
         set((s) => ({ selectedId: { ...s.selectedId, [principalId]: taskId } })),
-      markConsumedQ: (q) =>
-        set((s) => ({ consumedQs: s.consumedQs.includes(q) ? s.consumedQs : [...s.consumedQs.slice(-24), q] })),
-      hasConsumedQ: (q) => get().consumedQs.includes(q),
+      hydrateThread: (principalId, tasks) =>
+        set((s) => {
+          const current = s.threads[principalId] ?? [];
+          if (!current.length) return s;
+          const byId = new Map(tasks.map((t) => [t.taskId, t]));
+          let changed = false;
+          const next = current.map((item) => {
+            const fresh = byId.get(item.taskId);
+            if (!fresh) return item;
+            if (
+              fresh.status === item.status &&
+              fresh.approvals[0]?.decision === item.approvals[0]?.decision &&
+              fresh.approvals[0]?.executionStatus === item.approvals[0]?.executionStatus
+            ) {
+              return item;
+            }
+            changed = true;
+            return fresh;
+          });
+          if (!changed) return s;
+          return { threads: { ...s.threads, [principalId]: next } };
+        }),
     }),
     {
       name: WORK_KEY,

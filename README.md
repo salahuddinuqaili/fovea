@@ -43,7 +43,7 @@ Press **⌘K** (or **Ctrl+K**) any time you feel lost. Pick “Operator guide”
 | *Connect the live warehouse.* | **Gated.** The adapter is registered. Maya cannot arm it. Writes stay disabled. |
 | The sandbox `INSERT` from Command (or ⌘K → Sandbox write) | **Needs approval.** Maya cannot approve her own write. |
 | Then switch the header to **Jordan Hale** | Jordan’s Command shows the pending hash. Approvals is pending-first. |
-| Approve as Jordan | A short-lived sandbox credential. One row. Replay does nothing. |
+| Approve as Jordan | A short-lived sandbox credential. One row. Replay does nothing. Switch back to Maya — Work says **executed**, Command shows **Write approved by Jordan**. |
 | Switch to **Alex Voss** and try to approve Maya’s write | **Refused.** OS owners are not hidden super-approvers. |
 | A denied write (writes killed, or policy deny) | **Refused.** No approval is queued. |
 | Leave Work and come back this session | The thread is still there. `?q=` is consumed once. |
@@ -77,6 +77,7 @@ That’s the first run. If those things happen, Fovea is working.
 | Switching Maya → Jordan re-ran the sandbox INSERT | That was a v7 defect. | v8 does not auto-run `q` on a principal switch. |
 | “Connect the live warehouse” gated | The live adapter is not on the OS allowlist. | Ask a named metric. The fixture is still the read path. |
 | Work thread vanished after Approvals | That was a v8 gap. | v9 keeps this session’s Work in the tab. |
+| Work thread still says needs approval after Jordan approved | That was a v11 gap. | v12 follows the write. Switch back to Maya. |
 | Alex could approve Maya’s write | That was a hidden super-approver. | Only Jordan (approver, not the requester) can decide. |
 
 A confident wrong number is a failure. A refusal is not.
@@ -99,12 +100,12 @@ The header switcher (or **⌘K → Act as**) is not a login. It is whose desk yo
 
 ## What this version is
 
-**v11.0 — Desk stays put**
+**v12.0 — Work follows the write**
 
-- **Command’s desk home never yields.** A named handoff is a banner. Maya still sees four-click first run when a grant is waiting. Jordan’s pending hashes stay the approver desk, not a duplicate inbox card.
-- Handoff labels face the **recipient** (“Write from Maya”, “Named grant from Alex”), not the issuer.
-- Desk stats are role-true: pending hashes, this stream, named grants, this desk.
-- Sixteen operator simulations as a release input.
+- After Jordan approves or denies, Maya’s Work thread **follows** that decision. It does not stay on needs_approval.
+- A **decision** handoff lands on the requester’s desk: Write approved by Jordan.
+- Re-clicking a Command playbook this session runs it again. Switching the header still does not replay `?q=` as someone else.
+- Seventeen operator simulations as a release input.
 
 **Not in this version**
 
@@ -136,7 +137,7 @@ migrations/     unowned control snapshot — personal memory is never stored her
 ```
 
 ```bash
-npm test         # invariants, eval hard gates, sixteen operator simulations
+npm test         # invariants, eval hard gates, seventeen operator simulations
 npm run typecheck
 ```
 

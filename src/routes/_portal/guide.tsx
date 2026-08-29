@@ -42,9 +42,9 @@ function GuidePage() {
             ))}
           </ol>
           <p className="mt-4 text-sm text-muted">
-            After step 4, switch the header to <strong className="text-fg">Jordan Hale</strong> and approve. Replay once
-            — no extra row is written. Switch to <strong className="text-fg">Riley Park</strong> to read Audit; Maya
-            cannot.
+            After step 4, switch the header to <strong className="text-fg">Jordan Hale</strong> and approve. Switch back
+            to Maya — Work follows the write. Replay once — no extra row is written. Switch to{" "}
+            <strong className="text-fg">Riley Park</strong> to read Audit; Maya cannot.
           </p>
         </section>
 

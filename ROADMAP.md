@@ -99,6 +99,12 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - Handoff labels face the recipient. Desk stats are role-true.
 - Sixteen operator simulations as a release input.
 
+## v12 — Work follows the write (this tree)
+
+- After an approver decides, the requester’s Work thread follows that write. A decision handoff lands on their desk.
+- Re-clicking a playbook this session runs it. Header switch still does not replay `?q=` as someone else.
+- Seventeen operator simulations as a release input.
+
 ## Later — Accounts and a real warehouse DSN
 
 - SSO / accounts only when the user explicitly asks for them (Auth stays OFF until then)

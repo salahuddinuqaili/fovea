@@ -11,7 +11,7 @@ import type { AutonomyGrant } from "@/kernel/types";
 
 export const Route = createFileRoute("/_portal/policies")({ component: PoliciesPage });
 
-const BUNDLE = `policy_version: 1.9.0
+const BUNDLE = `policy_version: 1.10.0
 autonomy:
   default_stage: B
   global_switch: false
@@ -36,6 +36,7 @@ desks:
   sod: approver_only
   self_approve: deny
   inbox_hides_home: false
+  write_follow: true
 memory:
   personal:
     encrypted_at_rest: true

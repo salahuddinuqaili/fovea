@@ -554,7 +554,7 @@ export interface DeskHandoff {
   id: string;
   fromPrincipalId: string;
   toPrincipalId: string;
-  kind: "work" | "approval" | "policy";
+  kind: "work" | "approval" | "policy" | "decision";
   label: string;
   href: string;
   hint: string;
@@ -582,7 +582,7 @@ export interface InboxApprovalView {
   estimatedCost: number;
 }
 
-export const KERNEL_VERSION = "11.0.0";
-export const AGENT_RELEASE = "fovea-11.0.0";
-export const POLICY_VERSION = "1.9.0";
+export const KERNEL_VERSION = "12.0.0";
+export const AGENT_RELEASE = "fovea-12.0.0";
+export const POLICY_VERSION = "1.10.0";
 export const AGENT_ID = "analytics-investigator@1.0.0";

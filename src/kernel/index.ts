@@ -2,7 +2,7 @@ import { MODELS, TOOLS } from "./fixtures.ts";
 import { executeApprovedAction } from "./credentials.ts";
 import { canReadMemory, revealMemory } from "./memory.ts";
 import { listModels, xaiAvailable } from "./models.ts";
-import { decideApproval, runWork, savePersonalSkill } from "./orchestrator.ts";
+import { decideApproval, runWork, savePersonalSkill, followWrite } from "./orchestrator.ts";
 import { evaluatePolicy } from "./policy.ts";
 import { listNodes } from "./pipeline.ts";
 import { listAdapters } from "./adapters.ts";
@@ -158,11 +158,14 @@ export function openHandoff(actorId: string, handoffId: string) {
 
 export function listTasks(principalId?: string) {
   const store = getStore();
-  return principalId ? store.state.tasks.filter((t) => t.principalId === principalId) : store.state.tasks;
+  const list = principalId ? store.state.tasks.filter((t) => t.principalId === principalId) : store.state.tasks;
+  return list.map((t) => followWrite(store, t));
 }
 
 export function getTask(id: string) {
-  return getStore().state.tasks.find((t) => t.taskId === id) ?? null;
+  const store = getStore();
+  const found = store.state.tasks.find((t) => t.taskId === id);
+  return found ? followWrite(store, found) : null;
 }
 
 export function listApprovals() {
@@ -240,7 +243,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("11.0.0");
+  return runEvalSuite("12.0.0");
 }
 
 export async function runSimulations() {
@@ -393,5 +396,5 @@ export function retractGrant(
   return retracted;
 }
 
-export { AGENT_RELEASE, KERNEL_VERSION, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant, coveringGrants, grantContinuesReads, incomingHandoffs };
+export { AGENT_RELEASE, KERNEL_VERSION, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant, coveringGrants, grantContinuesReads, incomingHandoffs, followWrite };
 export type { KernelStore };

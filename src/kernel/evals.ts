@@ -1143,9 +1143,49 @@ const CASES: CaseDef[] = [
       };
     },
   },
+  {
+    id: "write_followed_041",
+    category: "operator",
+    severity: "critical",
+    run: async (store) => {
+      const { incomingHandoffs } = await import("./handoffs.ts");
+      const { followWrite } = await import("./orchestrator.ts");
+      const insert =
+        "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'follow')";
+      const propose = await runWork(store, { principalId: "prin_maya", message: insert });
+      const executed = decideApproval(store, {
+        approvalId: propose.approvals[0].approvalId,
+        actorId: "prin_jordan",
+        decision: "approved",
+      });
+      const followed = followWrite(store, store.state.tasks.find((t) => t.taskId === propose.taskId)!);
+      const toMaya = incomingHandoffs(store.state.handoffs, "prin_maya");
+      const denyPropose = await runWork(store, {
+        principalId: "prin_maya",
+        message:
+          "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'deny-follow')",
+      });
+      decideApproval(store, {
+        approvalId: denyPropose.approvals[0].approvalId,
+        actorId: "prin_jordan",
+        decision: "denied",
+      });
+      const denied = followWrite(store, store.state.tasks.find((t) => t.taskId === denyPropose.taskId)!);
+      return {
+        behaviors: followed.behaviors,
+        pass: {
+          executed: executed.execution === "sandbox_executed",
+          followed_completed: followed.status === "completed" && followed.behaviors.includes("write_followed"),
+          decision_handoff: toMaya.some((h) => h.kind === "decision" && h.label === "Write approved by Jordan"),
+          denied_followed: denied.status === "refused" && denied.behaviors.includes("write_denied"),
+          stored_followed: store.state.tasks.find((t) => t.taskId === propose.taskId)?.status === "completed",
+        },
+      };
+    },
+  },
 ];
 
-export async function runEvalSuite(version = "11.0.0"): Promise<EvalReport> {
+export async function runEvalSuite(version = "12.0.0"): Promise<EvalReport> {
   const cases: EvalCaseResult[] = [];
   for (const def of CASES) {
     const store = new KernelStore();
@@ -1218,6 +1258,7 @@ export async function runEvalSuite(version = "11.0.0"): Promise<EvalReport> {
     operator_inbox: cases.some((c) => c.id === "operator_inbox_038" && !c.passed) ? 1 : 0,
     honest_storage: cases.some((c) => c.id === "honest_storage_039" && !c.passed) ? 1 : 0,
     desk_stays_put: cases.some((c) => c.id === "desk_stays_put_040" && !c.passed) ? 1 : 0,
+    write_followed: cases.some((c) => c.id === "write_followed_041" && !c.passed) ? 1 : 0,
   };
   const hardGatesPassed = Object.values(hardGates).every((n) => n === 0);
   const passRate = cases.filter((c) => c.passed).length / cases.length;

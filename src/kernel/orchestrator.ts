@@ -1424,13 +1424,15 @@ export function decideApproval(
       correlationId: approval.taskId,
       summary: `denied ${approval.approvalId}`,
     });
-    return {
+    const report: ExecutionReport = {
       approval,
       execution: "denied",
       credential: null,
       sandbox: null,
       note: approval.executionNote,
     };
+    closeWrite(store, approval, report);
+    return report;
   }
 
   const reconstructed = hashProposedAction(approval);
@@ -1447,13 +1449,15 @@ export function decideApproval(
       correlationId: approval.taskId,
       summary: approval.executionNote,
     });
-    return {
+    const report: ExecutionReport = {
       approval,
       execution: "blocked_hash_mismatch",
       credential: null,
       sandbox: null,
       note: approval.executionNote,
     };
+    closeWrite(store, approval, report);
+    return report;
   }
 
   approval.decision = "approved";
@@ -1469,7 +1473,72 @@ export function decideApproval(
     correlationId: approval.taskId,
     summary: `approved ${approval.approvalId}`,
   });
-  return executeApprovedAction(store, { approvalId: approval.approvalId, actorId: actor.id });
+  const executed = executeApprovedAction(store, { approvalId: approval.approvalId, actorId: actor.id });
+  closeWrite(store, approval, executed);
+  return executed;
+}
+
+export function followWrite(store: KernelStore, result: WorkResult): WorkResult {
+  if (!result.approvals.length) return result;
+  const latest = result.approvals.map((a) => store.state.approvals.find((x) => x.approvalId === a.approvalId) ?? a);
+  const first = latest[0];
+  if (!first || first.decision === "pending") {
+    const same = latest.every((a, i) => a === result.approvals[i]);
+    return same ? result : { ...result, approvals: latest };
+  }
+  const executed = first.executionStatus === "sandbox_executed" || first.executionStatus === "sandbox_replayed";
+  const denied = first.decision === "denied" || first.executionStatus === "blocked_hash_mismatch";
+  if (!executed && !denied) return { ...result, approvals: latest };
+  if (result.behaviors.includes("write_followed") && result.status !== "needs_approval") {
+    return { ...result, approvals: latest };
+  }
+  const who = store.principal(first.approver ?? "")?.displayName ?? "the approver";
+  const hash = first.proposedActionHash.slice(0, 12);
+  const text = executed
+    ? first.executionStatus === "sandbox_replayed"
+      ? `Sandbox write already executed (idempotent). ${who} approved hash ${hash}… No extra row.`
+      : `Sandbox write executed. ${who} approved hash ${hash}… ${first.executionNote || "One row."}`
+    : first.executionStatus === "blocked_hash_mismatch"
+      ? "Write blocked. Action hash did not match. No credential minted."
+      : `Write denied by ${who}. No credential was minted.`;
+  const behaviors = result.behaviors.includes("write_followed")
+    ? result.behaviors
+    : [...result.behaviors, "write_followed", executed ? "sandbox_followed" : "write_denied"];
+  return {
+    ...result,
+    approvals: latest,
+    status: executed ? "completed" : "refused",
+    answer: {
+      claimClass: executed ? "supported" : "refusal",
+      text,
+      citations: result.answer?.citations ?? [],
+    },
+    behaviors,
+    nextAction: null,
+    finishedAt: first.decidedAt ?? result.finishedAt,
+  };
+}
+
+function closeWrite(store: KernelStore, approval: Approval, report: ExecutionReport) {
+  const task = store.state.tasks.find((t) => t.taskId === approval.taskId);
+  if (task) store.addTask(followWrite(store, task));
+  if (!approval.approver || approval.requestedBy === approval.approver) return;
+  const executed = report.execution === "sandbox_executed";
+  const denied = report.execution === "denied" || report.execution === "blocked_hash_mismatch";
+  if (!executed && !denied) return;
+  const fromName = store.principal(approval.approver)?.displayName ?? "Approver";
+  const first = fromName.split(" ")[0];
+  store.addHandoff(
+    makeHandoff({
+      fromPrincipalId: approval.approver,
+      toPrincipalId: approval.requestedBy,
+      kind: "decision",
+      label: executed ? `Write approved by ${first}` : `Write denied by ${first}`,
+      href: "/work",
+      hint: executed ? "The sandbox write ran. This thread follows it." : "No credential was minted.",
+      taskId: approval.taskId,
+    }),
+  );
 }
 
 export function savePersonalSkill(store: KernelStore, principalId: string, skill: SkillManifest) {

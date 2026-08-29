@@ -30,10 +30,10 @@ function WorkPage() {
   const selectedId = useWorkSession((s) => s.selectedId);
   const pushResult = useWorkSession((s) => s.pushResult);
   const selectResult = useWorkSession((s) => s.selectResult);
-  const markConsumedQ = useWorkSession((s) => s.markConsumedQ);
-  const hasConsumedQ = useWorkSession((s) => s.hasConsumedQ);
+  const hydrateThread = useWorkSession((s) => s.hydrateThread);
   const [draft, setDraft] = useState(q ?? "");
   const autoRanQ = useRef<string | null>(null);
+  const prevPrincipal = useRef(principalId);
   const bottomRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
   const boot = useQuery({ queryKey: ["bootstrap"], queryFn: () => bootstrapFn() });
@@ -70,15 +70,26 @@ function WorkPage() {
   });
 
   useEffect(() => {
+    if (prevPrincipal.current !== principalId) {
+      prevPrincipal.current = principalId;
+      if (q) {
+        void navigate({ to: "/work", search: {}, replace: true });
+      }
+      return;
+    }
     if (!q?.trim()) return;
-    if (autoRanQ.current === q || hasConsumedQ(q)) return;
+    if (autoRanQ.current === q) return;
     autoRanQ.current = q;
-    markConsumedQ(q);
     setDraft(q);
     mut.mutate({ message: q, as: principalId });
     void navigate({ to: "/work", search: {}, replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- auto-run once per q, never on principal switch
-  }, [q]);
+  }, [q, principalId]);
+
+  useEffect(() => {
+    if (!history.data) return;
+    hydrateThread(principalId, history.data);
+  }, [history.data, principalId, hydrateThread]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "nearest" });

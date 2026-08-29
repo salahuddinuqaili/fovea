@@ -34,7 +34,7 @@ function EvalsPage() {
       <PageHeader
         kicker="Govern"
         title="Evaluations"
-        description="Hard gates cannot be averaged away. Sixteen operator desks. Command’s desk home stays put — a named handoff is a banner, not a replacement. Handoff labels face the recipient."
+        description="Hard gates cannot be averaged away. Seventeen operator desks. After Jordan decides, Maya’s Work thread follows the write. A decision handoff lands on her desk. Command’s home stays put."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => evalMut.mutate()} disabled={evalMut.isPending}>

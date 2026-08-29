@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("11.0.0");
+    const report = await runEvalSuite("12.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,9 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all sixteen journeys pass", async () => {
+  it("all seventeen journeys pass", async () => {
     const report = await runOperatorSimulations();
-    assert.equal(report.simulations.length, 16);
+    assert.equal(report.simulations.length, 17);
     assert.equal(
       report.passed,
       true,
@@ -469,7 +469,7 @@ describe("v8 honest control plane", () => {
   it("classifies please-grant, blocks pending execute, and keeps live off the OS allowlist", async () => {
     const { executeApprovedAction } = await import("./credentials.ts");
     const { KERNEL_VERSION } = await import("./types.ts");
-    assert.equal(KERNEL_VERSION, "11.0.0");
+    assert.equal(KERNEL_VERSION, "12.0.0");
     assert.equal(
       classifyIntent("Please grant Maya warehouse.query for investigate-metric."),
       "grant_issue",
@@ -603,5 +603,33 @@ describe("v11 desk stays put", () => {
     const maya = incomingHandoffs(store.state.handoffs, "prin_maya");
     assert.equal(maya.some((h) => h.label === "Named grant from Alex"), true);
     assert.equal(coveringGrants(store.state.grants, "prin_maya").length, 1);
+  });
+});
+
+describe("v12 work follows the write", () => {
+  it("patches the stored task and hands the decision back to Maya", async () => {
+    const { incomingHandoffs } = await import("./handoffs.ts");
+    const { decideApproval, followWrite } = await import("./orchestrator.ts");
+    const store = new KernelStore();
+    const propose = await runWork(store, {
+      principalId: "prin_maya",
+      message:
+        "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'v12')",
+    });
+    assert.equal(propose.status, "needs_approval");
+    const executed = decideApproval(store, {
+      approvalId: propose.approvals[0].approvalId,
+      actorId: "prin_jordan",
+      decision: "approved",
+    });
+    assert.equal(executed.execution, "sandbox_executed");
+    const stored = store.state.tasks.find((t) => t.taskId === propose.taskId);
+    assert.equal(stored?.status, "completed");
+    assert.equal(stored?.behaviors.includes("write_followed"), true);
+    const followed = followWrite(store, stored!);
+    assert.equal(followed.status, "completed");
+    assert.equal(followed.nextAction, null);
+    const maya = incomingHandoffs(store.state.handoffs, "prin_maya");
+    assert.equal(maya.some((h) => h.kind === "decision" && h.label === "Write approved by Jordan"), true);
   });
 });
