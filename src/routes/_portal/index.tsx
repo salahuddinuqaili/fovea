@@ -38,12 +38,17 @@ function CommandCenter() {
         <Stat
           label="Autonomy"
           value="Stage B"
-          hint={autonomyHint(boot.data?.activeGrants ?? 0, q.data?.coveringGrants, principal?.displayName)}
+          hint={autonomyHint(
+            boot.data?.activeGrants ?? 0,
+            q.data?.coveringGrants,
+            principal?.displayName,
+            boot.data?.activeGrantViews,
+          )}
         />
         <Stat
           label="Release"
           value={verified ? "Verified" : "Blocked"}
-          hint={boot.data?.release?.version ?? data?.release?.version ?? "—"}
+          hint={boot.data?.agentRelease ?? data?.release?.version ?? "—"}
         />
         <Stat label="Pending approvals" value={String(data?.pendingApprovals.length ?? 0)} hint="Exact-hash bound" />
         <Stat
@@ -157,6 +162,7 @@ function autonomyHint(
   active: number,
   covering: { task: string; continuesReads: boolean }[] | undefined,
   name?: string,
+  views?: { principalName: string; task: string; continuesReads: boolean }[],
 ) {
   const live = (covering ?? []).find((g) => g.continuesReads);
   if (live) {
@@ -165,6 +171,12 @@ function autonomyHint(
   }
   if ((covering ?? []).length) {
     return `${covering!.length} covering this desk · selected workflow only`;
+  }
+  const roster = views ?? [];
+  if (roster.length) {
+    const v = roster[0];
+    const who = v.principalName.split(" ")[0];
+    return `${who} · ${v.task} live`;
   }
   return `${active} active · none covering this desk`;
 }

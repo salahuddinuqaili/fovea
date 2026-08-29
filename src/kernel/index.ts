@@ -14,7 +14,7 @@ import { issueGrant, revokeGrant, findGrant, isGrantActive, coveringGrants, gran
 import { runtimeVerify } from "./kms.ts";
 import { listWarehouseProfiles } from "./warehouse.ts";
 import type { AutonomyGrant, KillSwitchState, SkillManifest } from "./types.ts";
-import { AGENT_RELEASE, POLICY_VERSION } from "./types.ts";
+import { AGENT_RELEASE, KERNEL_VERSION, POLICY_VERSION } from "./types.ts";
 
 export function bootstrap() {
   const store = getStore();
@@ -22,6 +22,7 @@ export function bootstrap() {
   const verification = release ? verifyRelease(release) : { ok: false, reasons: ["no release"] };
   return {
     agentRelease: AGENT_RELEASE,
+    kernelVersion: KERNEL_VERSION,
     policyVersion: POLICY_VERSION,
     autonomyStage: "B" as const,
     environment: "demo" as const,
@@ -46,6 +47,15 @@ export function bootstrap() {
     kms: runtimeVerify(),
     grants: store.state.grants,
     activeGrants: store.state.grants.filter((g) => isGrantActive(g)).length,
+    activeGrantViews: store.state.grants.filter((g) => isGrantActive(g)).map((g) => ({
+      id: g.id,
+      principalId: g.principalId,
+      principalName: store.principal(g.principalId)?.displayName ?? g.principalId,
+      tool: g.tool,
+      task: g.task,
+      continuesReads: grantContinuesReads(g),
+      expiresAt: g.expiresAt,
+    })),
     skillCount: store.state.skills.length,
     taskCount: store.state.tasks.length,
     pendingApprovals: store.state.approvals.filter((a) => a.decision === "pending").length,
@@ -163,7 +173,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("7.0.0");
+  return runEvalSuite("8.0.0");
 }
 
 export async function runSimulations() {
@@ -214,9 +224,13 @@ export function tryLoadRelease(kind: "current" | "tampered" | "unsigned") {
 
 export function health() {
   const store = getStore();
+  const snapshotVersion = store.state.loadedRelease?.version ?? null;
   return {
     os: store.state.kill.entireOs ? "disabled" : "up",
     writePlane: store.state.kill.writePlane ? "disabled" : "gated_sandbox_after_approval",
+    kernel: AGENT_RELEASE,
+    snapshotVersion,
+    aligned: snapshotVersion === KERNEL_VERSION,
     models: MODELS.map((m) => ({
       alias: m.alias,
       status: store.state.kill.models.includes(m.alias) ? "disabled" : m.status,
@@ -236,6 +250,15 @@ export function health() {
     warehouses: listWarehouseProfiles(),
     grants: store.state.grants,
     activeGrants: store.state.grants.filter((g) => isGrantActive(g)).length,
+    activeGrantViews: store.state.grants.filter((g) => isGrantActive(g)).map((g) => ({
+      id: g.id,
+      principalId: g.principalId,
+      principalName: store.principal(g.principalId)?.displayName ?? g.principalId,
+      tool: g.tool,
+      task: g.task,
+      continuesReads: grantContinuesReads(g),
+      expiresAt: g.expiresAt,
+    })),
   };
 }
 
@@ -277,9 +300,7 @@ export function retractGrant(
   const found = findGrant(store.state.grants, selector);
   const retracted = revokeGrant(actor, found);
   if (!retracted.ok) return retracted;
-  const i = store.state.grants.findIndex((g) => g.id === retracted.grant.id);
-  if (i >= 0) store.state.grants[i] = retracted.grant;
-  else store.state.grants.unshift(retracted.grant);
+  store.applyGrant(retracted.grant);
   store.emit({
     taskId: null,
     sessionId: null,
@@ -292,5 +313,5 @@ export function retractGrant(
   return retracted;
 }
 
-export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant, coveringGrants, grantContinuesReads };
+export { AGENT_RELEASE, KERNEL_VERSION, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant, coveringGrants, grantContinuesReads };
 export type { KernelStore };

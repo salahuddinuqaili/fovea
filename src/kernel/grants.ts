@@ -22,7 +22,7 @@ export function parseGrantRequest(text: string): {
   maxRisk: RiskTier;
   wildcard: boolean;
 } | null {
-  const m = text.trim().match(/^grant\s+([a-z]+)\s+(\S+)\s+for\s+([a-z0-9._*-]+)/i);
+  const m = text.trim().match(/\bgrant\s+([a-z]+)\s+(\S+)\s+for\s+([a-z0-9._*-]+)/i);
   if (!m) return null;
   const principalId = NAMES[m[1].toLowerCase()];
   if (!principalId) return null;
@@ -44,9 +44,9 @@ export function parseRevokeRequest(text: string): {
   tool?: string;
   task?: string;
 } | null {
-  const byId = text.trim().match(/^revoke\s+(grant_[a-z0-9]+)/i);
+  const byId = text.trim().match(/\brevoke\s+(grant_[a-z0-9]+)/i);
   if (byId) return { grantId: byId[1] };
-  const byShape = text.trim().match(/^revoke\s+([a-z]+)\s+(\S+)\s+for\s+([a-z0-9._*-]+)/i);
+  const byShape = text.trim().match(/\brevoke\s+([a-z]+)\s+(\S+)\s+for\s+([a-z0-9._*-]+)/i);
   if (!byShape) return null;
   const principalId = NAMES[byShape[1].toLowerCase()];
   if (!principalId) return null;

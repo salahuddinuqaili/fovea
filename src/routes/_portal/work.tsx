@@ -25,10 +25,11 @@ function WorkPage() {
   const { q } = Route.useSearch();
   const navigate = useNavigate();
   const principalId = useFoveaSession((s) => s.principalId);
+  const setPrincipalId = useFoveaSession((s) => s.setPrincipalId);
   const [draft, setDraft] = useState(q ?? "");
-  const [thread, setThread] = useState<WorkResult[]>([]);
-  const [selected, setSelected] = useState<WorkResult | null>(null);
-  const autoRan = useRef<string | null>(null);
+  const [threads, setThreads] = useState<Record<string, WorkResult[]>>({});
+  const [selectedId, setSelectedId] = useState<Record<string, string | null>>({});
+  const autoRanQ = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
   const boot = useQuery({ queryKey: ["bootstrap"], queryFn: () => bootstrapFn() });
@@ -49,18 +50,15 @@ function WorkPage() {
       ? { ...b, why: "Covered — sibling canonical reads continue." }
       : b,
   );
-
-  useEffect(() => {
-    setThread([]);
-    setSelected(null);
-    autoRan.current = null;
-  }, [principalId]);
+  const thread = threads[principalId] ?? [];
+  const selected = thread.find((t) => t.taskId === selectedId[principalId]) ?? null;
 
   const mut = useMutation({
-    mutationFn: (message: string) => submitWorkFn({ data: { principalId, message } }),
-    onSuccess: (res) => {
-      setThread((t) => [...t, res]);
-      setSelected(res);
+    mutationFn: (input: { message: string; as: string }) =>
+      submitWorkFn({ data: { principalId: input.as, message: input.message } }),
+    onSuccess: (res, vars) => {
+      setThreads((t) => ({ ...t, [vars.as]: [...(t[vars.as] ?? []), res] }));
+      setSelectedId((s) => ({ ...s, [vars.as]: res.taskId }));
       setDraft("");
       void qc.invalidateQueries();
     },
@@ -69,23 +67,38 @@ function WorkPage() {
 
   useEffect(() => {
     if (!q?.trim()) return;
-    if (autoRan.current === `${principalId}:${q}`) return;
-    autoRan.current = `${principalId}:${q}`;
+    if (autoRanQ.current === q) return;
+    autoRanQ.current = q;
     setDraft(q);
-    mut.mutate(q);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- auto-run once per q+principal
-  }, [q, principalId]);
+    mut.mutate({ message: q, as: principalId });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- auto-run once per q, never on principal switch
+  }, [q]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "nearest" });
   }, [thread.length, mut.isPending, selected?.taskId]);
 
+  const runAs = (message: string, as = principalId) => {
+    if (!message.trim()) return;
+    mut.mutate({ message: message.trim(), as });
+  };
+
   const follow = (action: NextAction) => {
     const [path, query] = action.href.split("?");
     const nextQ = new URLSearchParams(query ?? "").get("q");
+    if (action.asPrincipalId && action.asPrincipalId !== principalId) {
+      setPrincipalId(action.asPrincipalId);
+      if (path === "/work") {
+        autoRanQ.current = nextQ ? null : autoRanQ.current;
+        void navigate({ to: "/work", search: nextQ ? { q: nextQ } : {} });
+        return;
+      }
+      void navigate({ to: (path || "/") as "/" });
+      return;
+    }
     if (path === "/work" && nextQ) {
       setDraft(nextQ);
-      mut.mutate(nextQ);
+      runAs(nextQ);
       return;
     }
     if (path === "/approvals") {
@@ -110,8 +123,8 @@ function WorkPage() {
           <div className="text-[11px] uppercase tracking-[0.18em] text-subtle">Work console</div>
           <h1 className="mt-1 font-display text-4xl tracking-tight">Ask with evidence</h1>
           <p className="mt-2 max-w-lg text-sm text-muted">
-            Every answer is classified. Unsupported confidence is a failure. This console is this session — earlier
-            tasks stay on Tasks. Production execution stays disabled.
+            Every answer is classified. Unsupported confidence is a failure. This console is this desk’s session —
+            switching the header does not replay the last question as someone else. Production execution stays disabled.
           </p>
           <p className="mt-3 font-mono text-[11px] text-subtle">
             Session budget {formatUsd(overview.data?.budgetRemainingUsd ?? 25, 2)} left of{" "}
@@ -137,7 +150,7 @@ function WorkPage() {
                     type="button"
                     onClick={() => {
                       setDraft(s.q);
-                      mut.mutate(s.q);
+                      runAs(s.q);
                     }}
                     className="rounded-[var(--radius-md)] border border-border bg-surface p-3 text-left hover:border-border-strong"
                   >
@@ -166,11 +179,11 @@ function WorkPage() {
               <div
                 role="button"
                 tabIndex={0}
-                onClick={() => setSelected(item)}
+                onClick={() => setSelectedId((s) => ({ ...s, [principalId]: item.taskId }))}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setSelected(item);
+                    setSelectedId((s) => ({ ...s, [principalId]: item.taskId }));
                   }
                 }}
                 className={cn(
@@ -221,7 +234,7 @@ function WorkPage() {
           onSubmit={(e) => {
             e.preventDefault();
             if (!draft.trim()) return;
-            mut.mutate(draft.trim());
+            runAs(draft.trim());
           }}
         >
           <Textarea
@@ -230,7 +243,7 @@ function WorkPage() {
             onKeyDown={(e) => {
               if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
                 e.preventDefault();
-                if (draft.trim() && !mut.isPending) mut.mutate(draft.trim());
+                if (draft.trim() && !mut.isPending) runAs(draft.trim());
               }
             }}
             placeholder="Ask a named metric, plan a backfill, or try an adversarial prompt."
@@ -335,22 +348,24 @@ function EvidencePane({
       </Section>
       {result.provenance?.queries.length ? (
         <Section title={result.provenance.queries.length > 1 ? "Queries" : "Query"}>
-          {result.sql ? (
-            <pre className="overflow-x-auto rounded-[var(--radius-sm)] bg-bg p-3 font-mono text-[11px] leading-relaxed text-muted">
-              {result.sql.query}
-            </pre>
-          ) : null}
           <ul className="space-y-1.5">
             {result.provenance.queries.map((q, i) => (
               <li key={q.jobId} className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs text-fg">
                     {result.provenance!.metricDefinitions[i]?.replace(/_/g, " ") ?? q.tables[0] ?? q.jobId}
-                    {i === 0 && result.provenance!.queries.length > 1 ? " · primary" : ""}
+                    {i === 0 && result.provenance!.queries.length > 1 ? " · primary" : i > 0 ? " · sibling" : ""}
                   </span>
                   <span className="font-mono text-[11px] text-subtle">{q.jobId}</span>
                 </div>
                 <p className="mt-1 font-mono text-[11px] text-muted">{q.tables.join(", ")}</p>
+                {q.sql ? (
+                  <pre className="mt-2 overflow-x-auto font-mono text-[11px] leading-relaxed text-muted">{q.sql}</pre>
+                ) : i === 0 && result.sql ? (
+                  <pre className="mt-2 overflow-x-auto font-mono text-[11px] leading-relaxed text-muted">
+                    {result.sql.query}
+                  </pre>
+                ) : null}
               </li>
             ))}
           </ul>

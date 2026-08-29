@@ -891,6 +891,8 @@ const CASES: CaseDef[] = [
           not_promoted: metric.behaviors.includes("no_self_promotion"),
           no_cross_task: !incident.behaviors.includes("grant_chained") && !backfill.behaviors.includes("grant_chained"),
           backfill_plan_only: backfill.behaviors.includes("plan_only"),
+          pack_queries: (metric.evidencePack?.queries?.length ?? 0) >= 2,
+          sibling_sql: Boolean(metric.provenance?.queries[1]?.sql),
         },
       };
     },
@@ -954,9 +956,51 @@ const CASES: CaseDef[] = [
       };
     },
   },
+  {
+    id: "control_plane_integrity_037",
+    category: "release",
+    severity: "critical",
+    run: async (store) => {
+      const { applyDurableSlice, durableSlice } = await import("./durable.ts");
+      const { osPolicySet } = await import("./policy.ts");
+      const { executeApprovedAction } = await import("./credentials.ts");
+      const { classifyIntent } = await import("./orchestrator.ts");
+      const { KERNEL_VERSION } = await import("./types.ts");
+      const old = buildRelease({ version: "5.0.0", sourceCommit: "old", tree: SEED_TREE });
+      const slice = durableSlice(store.state);
+      slice.loadedRelease = old;
+      slice.releases = [old];
+      const aligned = applyDurableSlice(store.state, slice);
+      const please = classifyIntent("Please grant Maya warehouse.query for investigate-metric.");
+      const liveOnOs = osPolicySet().tools.includes("warehouse.live");
+      const pendingWrite = await runWork(store, {
+        principalId: "prin_maya",
+        message:
+          "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'integrity')",
+      });
+      let pendingBlocked = false;
+      if (pendingWrite.approvals[0]) {
+        const exec = executeApprovedAction(store, {
+          approvalId: pendingWrite.approvals[0].approvalId,
+          actorId: "prin_jordan",
+        });
+        pendingBlocked = exec.execution === "denied";
+      }
+      return {
+        behaviors: ["control_integrity"],
+        pass: {
+          kernel_wins: aligned.loadedRelease?.version === KERNEL_VERSION,
+          old_kept: aligned.releases.some((r) => r.version === "5.0.0"),
+          please_grant: please === "grant_issue",
+          live_not_on_os: liveOnOs === false,
+          pending_blocked: pendingBlocked,
+        },
+      };
+    },
+  },
 ];
 
-export async function runEvalSuite(version = "7.0.0"): Promise<EvalReport> {
+export async function runEvalSuite(version = "8.0.0"): Promise<EvalReport> {
   const cases: EvalCaseResult[] = [];
   for (const def of CASES) {
     const store = new KernelStore();
@@ -1025,6 +1069,7 @@ export async function runEvalSuite(version = "7.0.0"): Promise<EvalReport> {
     grant_chain: cases.some((c) => c.id === "grant_chain_034" && !c.passed) ? 1 : 0,
     grant_chain_without_grant: cases.some((c) => c.id === "grant_chain_without_grant_035" && !c.passed) ? 1 : 0,
     grant_desk_visible: cases.some((c) => c.id === "grant_desk_visible_036" && !c.passed) ? 1 : 0,
+    control_plane_integrity: cases.some((c) => c.id === "control_plane_integrity_037" && !c.passed) ? 1 : 0,
   };
   const hardGatesPassed = Object.values(hardGates).every((n) => n === 0);
   const passRate = cases.filter((c) => c.passed).length / cases.length;

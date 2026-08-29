@@ -63,12 +63,20 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - Writes, backfills, and `warehouse.live` are not continued. Grants do not chain across tasks.
 - Eleven operator simulations as a release input.
 
-## v7 — Desk-visible selected workflows (this tree)
+## v7 — Desk-visible selected workflows
 
 - Covering grants show on the operator’s desk (Command + Work) before they ask.
 - Continued answers stay scannable; Evidence lists every sibling query.
 - There is no global autonomous switch. Stage D stays named, never self-promoted.
 - Twelve operator simulations as a release input.
+
+## v8 — Honest control plane (this tree)
+
+- Running kernel’s signed release wins when the unowned snapshot lags. Missing `slice.grants` does not wipe grants. Failed hydrate does not mark hydrated.
+- Issuer-visible grants on Command and Health. Next actions switch desk (`asPrincipalId`); they do not execute as the issuer.
+- Work threads stay per-desk. A `?q=` does not auto-run on principal switch.
+- Evidence includes sibling SQL. Pending execute is denied. `warehouse.live` is off the OS allowlist.
+- Thirteen operator simulations as a release input.
 
 ## Later — Accounts and a real warehouse DSN
 

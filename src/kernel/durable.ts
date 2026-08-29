@@ -60,6 +60,10 @@ export function durableSlice(state: KernelState): DurableSlice {
   };
 }
 
+/**
+ * Restore unowned control metadata. The running kernel's signed release wins
+ * when the snapshot lags — grants, tasks, and sessions are kept.
+ */
 export function applyDurableSlice(state: KernelState, slice: DurableSlice): KernelState {
   const personalMemory = state.memory.filter((m) => m.scope === "personal");
   const personalSkills = state.skills.filter((s) => s.scope === "personal");
@@ -71,6 +75,14 @@ export function applyDurableSlice(state: KernelState, slice: DurableSlice): Kern
     ...slice.skills.filter((s) => s.scope !== "personal"),
     ...personalSkills,
   ];
+  const currentRelease = state.loadedRelease;
+  const snapRelease = slice.loadedRelease;
+  const kernelWins = Boolean(currentRelease) && (!snapRelease || snapRelease.version !== currentRelease?.version);
+  const loadedRelease = kernelWins ? currentRelease : (snapRelease ?? currentRelease);
+  const releases = mergeReleases([
+    ...(kernelWins && currentRelease ? [currentRelease] : []),
+    ...(slice.releases ?? state.releases),
+  ]);
   return {
     sessions: slice.sessions ?? [],
     tasks: slice.tasks ?? [],
@@ -81,13 +93,24 @@ export function applyDurableSlice(state: KernelState, slice: DurableSlice): Kern
     improvements: slice.improvements ?? [],
     skills,
     kill: slice.kill ?? emptyKill(),
-    releases: slice.releases ?? state.releases,
-    loadedRelease: slice.loadedRelease ?? state.loadedRelease,
-    loadError: slice.loadError ?? null,
+    releases,
+    loadedRelease,
+    loadError: kernelWins ? null : (slice.loadError ?? null),
     credentials: slice.credentials ?? [],
     sandbox: slice.sandbox ?? seedSandbox(),
-    grants: (slice.grants ?? []).map(normalizeGrant),
+    grants: (slice.grants ?? state.grants ?? []).map(normalizeGrant),
   };
+}
+
+export function mergeReleases(list: ReleaseArtifact[]): ReleaseArtifact[] {
+  const seen = new Set<string>();
+  const out: ReleaseArtifact[] = [];
+  for (const r of list) {
+    if (!r?.version || seen.has(r.version)) continue;
+    seen.add(r.version);
+    out.push(r);
+  }
+  return out;
 }
 
 function normalizeGrant(g: AutonomyGrant): AutonomyGrant {

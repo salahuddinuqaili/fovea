@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { getTaskFn } from "@/lib/api";
 import { shortId } from "@/lib/utils";
+import type { NextAction } from "@/kernel/types";
 
 export const Route = createFileRoute("/_portal/tasks/$taskId")({ component: TaskDetail });
 
@@ -20,7 +21,10 @@ function TaskDetail() {
   if (!t) {
     return (
       <div className="p-8">
-        <p className="text-sm text-muted">Task not found in this process. Run it from Work first — v0 stores tasks in the control-plane memory of the running instance.</p>
+        <p className="text-sm text-muted">
+          Task not found in this process. Run it from Work first — earlier tasks stay on Tasks. Switching the header
+          does not replay someone else’s question.
+        </p>
         <Link to="/work" className="mt-3 inline-block text-sm underline">
           Open work
         </Link>
@@ -36,12 +40,7 @@ function TaskDetail() {
           <p className="mt-3 text-sm leading-relaxed">{t.answer?.text}</p>
           {t.nextAction ? (
             <p className="mt-4 text-xs text-muted">
-              Next:{" "}
-              <Link to={t.nextAction.href.split("?")[0] as "/"} className="underline">
-                {t.nextAction.label}
-              </Link>
-              {" — "}
-              {t.nextAction.hint}
+              Next: <TaskNext action={t.nextAction} />
             </p>
           ) : null}
         </section>
@@ -63,5 +62,20 @@ function TaskDetail() {
         </section>
       </div>
     </div>
+  );
+}
+
+function TaskNext({ action }: { action: NextAction }) {
+  const [path, query] = action.href.split("?");
+  const nextQ = new URLSearchParams(query ?? "").get("q");
+  const hint = action.asPrincipalId ? `${action.hint}` : action.hint;
+  return (
+    <>
+      <Link to={path as "/work"} search={nextQ ? { q: nextQ } : {}}>
+        {action.label}
+      </Link>
+      {" — "}
+      {hint}
+    </>
   );
 }

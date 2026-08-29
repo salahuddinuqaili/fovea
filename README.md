@@ -34,10 +34,11 @@ Press **⌘K** (or **Ctrl+K**) any time you feel lost. Pick “Operator guide”
 | *Investigate the dip last week.* | An **incident brief** across three canonical metrics. It will not claim the pipeline *caused* the dip. Copy or download the **evidence pack** from the right-hand pane. |
 | *Enable autonomous mode for everyone.* | **Refused.** There is no global switch. |
 | *Grant Maya warehouse.query for investigate-metric.* as Maya | **Refused.** Only the OS owner can issue a named grant. |
-| Same line as **Alex Voss** | A **named grant** is stored. Switch to Maya — Work shows the grant before she asks. |
+| Same line as **Alex Voss** | A **named grant** is stored. Switch to Maya — Work shows the grant before she asks. Alex’s Command lists Maya’s grant. |
 | Same line again as Alex | **Refused.** An active grant already covers that workflow. Revoke it first. |
 | Maya’s Work console | A chip: **Selected workflow live**. Command says Maya · investigate-metric continues. |
-| Maya then asks north-star revenue | **Covered**, **short sibling lines**, **four queries** in Evidence. Still no write. |
+| Maya then asks north-star revenue | **Covered**, **short sibling lines**, **sibling SQL** in Evidence. Still no write. |
+| Switch the header while a `?q=` is in the URL | The last question is **not** replayed as the new person. |
 | *Revoke Maya warehouse.query for investigate-metric.* as Alex | Coverage ends. Maya’s next metric is a single query again. |
 | *Connect the live warehouse.* | **Gated.** The adapter is registered. Maya cannot arm it. Writes stay disabled. |
 | The sandbox `INSERT` from Command (or ⌘K → Sandbox write) | **Needs approval.** Maya cannot approve her own write. |
@@ -64,8 +65,10 @@ That’s the first run. If those things happen, Fovea is working.
 | Maya cannot issue a grant | Correct. Analysts do not mint Stage D. | Header → **Alex Voss** → Policy, or type the grant line in Work. |
 | Duplicate grant refused | An active grant already covers that workflow. | Revoke it first, then re-issue if you mean to. |
 | “Selected workflow live” on Work | This desk has a covering grant. | Ask a named metric. Sibling reads continue. Revoke from Policy if it should stop. |
-| “Covered by named grant…” plus sibling lines | The selected `investigate-metric` workflow continued in-task. | Evidence lists every query. Writes stay hash-bound. |
-| “Connect the live warehouse” gated | The live adapter is not on Maya’s allowlist. | Ask a named metric. The fixture is still the read path. |
+| “Covered by named grant…” plus sibling lines | The selected `investigate-metric` workflow continued in-task. | Evidence lists every query **and its SQL**. Writes stay hash-bound. |
+| Alex’s Command says “none covering this desk” after a grant | It shouldn’t. v8 lists the issued grant on the issuer’s desk. | Refresh Command. Health also names who holds the grant. |
+| Switching Maya → Jordan re-ran the sandbox INSERT | That was a v7 defect. | v8 does not auto-run `q` on a principal switch. |
+| “Connect the live warehouse” gated | The live adapter is not on the OS allowlist. | Ask a named metric. The fixture is still the read path. |
 
 A confident wrong number is a failure. A refusal is not.
 
@@ -87,12 +90,13 @@ The header switcher (or **⌘K → Act as**) is not a login. It is whose desk yo
 
 ## What this version is
 
-**v7.0 — Desk-visible selected workflows**
+**v8.0 — Honest control plane**
 
-- After Alex issues a named grant, **Maya’s desk shows it** before she asks. Command says whose workflow continues. Work chips “Selected workflow live.”
-- Continued answers are **scannable**: one narrative for the named metric, one-line sibling reads. Evidence lists every query, not just the primary SQL.
-- There is **no global switch**. A grant never promotes Stage D. Writes stay hash-bound.
-- Twelve operator simulations as a release input.
+- The **running kernel’s signed release** wins when the unowned snapshot lags. A failed hydrate cannot wipe grants.
+- **Issuer-visible grants.** After Alex issues, Command and Health name Maya’s workflow. Next actions switch desk; they do not run as Alex.
+- Switching the header **does not replay** the last `?q=` as the new person. Work threads stay per-desk.
+- Evidence lists **sibling SQL**. A pending approval cannot mint a credential. `warehouse.live` is off the OS allowlist.
+- Thirteen operator simulations as a release input.
 
 **Not in this version**
 
@@ -100,6 +104,7 @@ The header switcher (or **⌘K → Act as**) is not a login. It is whose desk yo
 - A live warehouse DSN
 - Production backfill execution
 - Arbitrary plugins or MCP install
+- A global autonomous switch (not planned)
 
 ---
 
@@ -123,7 +128,7 @@ migrations/     unowned control snapshot — personal memory is never stored her
 ```
 
 ```bash
-npm test         # invariants, eval hard gates, twelve operator simulations
+npm test         # invariants, eval hard gates, thirteen operator simulations
 npm run typecheck
 ```
 

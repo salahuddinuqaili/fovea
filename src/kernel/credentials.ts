@@ -104,6 +104,17 @@ export function executeApprovedAction(
     };
   }
 
+  if (approval.decision !== "approved") {
+    approval.executionNote = "Refused. A pending or denied approval cannot mint a credential or execute.";
+    return {
+      approval,
+      execution: "denied",
+      credential: null,
+      sandbox: null,
+      note: approval.executionNote,
+    };
+  }
+
   const kind = String(approval.approvedConstraints.kind ?? "");
   if (kind !== "sandbox_write") {
     approval.executionStatus = "disabled_prod";

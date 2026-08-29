@@ -37,10 +37,9 @@ export async function hydrateControlStore(): Promise<void> {
       correlationId: "control-store",
       summary: `Control metadata hydrated (${dbSource}). Personal memory was not loaded from the snapshot.`,
     });
+    markHydrated(true);
   } catch (err) {
     console.error("[fovea] control hydrate failed", err);
-  } finally {
-    markHydrated(true);
   }
 }
 

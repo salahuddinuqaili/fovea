@@ -323,6 +323,7 @@ export interface ProvenanceRecord {
     tables: string[];
     partitions: string[];
     executedAt: string;
+    sql?: string;
   }>;
   codeSources: Array<{ repositoryId: string; commit: string; paths: string[] }>;
   metricDefinitions: string[];
@@ -468,6 +469,7 @@ export interface EvidencePack {
   claim: string;
   citations: Citation[];
   queryHashes: string[];
+  queries?: Array<{ jobId: string; queryHash: string; tables: string[]; metric?: string; sql?: string }>;
   metrics: string[];
   policyDecisions: Decision[];
   agentRelease: string;
@@ -479,6 +481,7 @@ export interface NextAction {
   label: string;
   href: string;
   hint: string;
+  asPrincipalId?: string;
 }
 
 export interface WorkResult {
@@ -528,6 +531,26 @@ export interface QueryJob {
   dryRun: boolean;
 }
 
-export const AGENT_RELEASE = "fovea-7.0.0";
-export const POLICY_VERSION = "1.5.0";
+export interface CoveringGrant {
+  id: string;
+  tool: string;
+  task: string;
+  actions: string[];
+  expiresAt: string;
+  continuesReads: boolean;
+}
+
+export interface ActiveGrantView {
+  id: string;
+  principalId: string;
+  principalName: string;
+  tool: string;
+  task: string;
+  continuesReads: boolean;
+  expiresAt: string;
+}
+
+export const KERNEL_VERSION = "8.0.0";
+export const AGENT_RELEASE = "fovea-8.0.0";
+export const POLICY_VERSION = "1.6.0";
 export const AGENT_ID = "analytics-investigator@1.0.0";

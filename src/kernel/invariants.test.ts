@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("7.0.0");
+    const report = await runEvalSuite("8.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,9 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all twelve journeys pass", async () => {
+  it("all thirteen journeys pass", async () => {
     const report = await runOperatorSimulations();
-    assert.equal(report.simulations.length, 12);
+    assert.equal(report.simulations.length, 13);
     assert.equal(
       report.passed,
       true,
@@ -438,5 +438,55 @@ describe("v7 grant desk visible", () => {
       message: "Revoke Maya warehouse.query for investigate-metric.",
     });
     assert.equal(coveringGrants(store.state.grants, "prin_maya").length, 0);
+  });
+});
+
+describe("v8 honest control plane", () => {
+  it("aligns a lagging snapshot to the running kernel without wiping grants", async () => {
+    const { applyDurableSlice, durableSlice } = await import("./durable.ts");
+    const { KERNEL_VERSION } = await import("./types.ts");
+    const store = new KernelStore();
+    const issued = await runWork(store, {
+      principalId: "prin_alex",
+      message: "Please grant Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(issued.status, "completed");
+    assert.equal(issued.nextAction?.asPrincipalId, "prin_maya");
+    assert.equal(issued.nextAction?.href.includes("q="), false);
+    const old = buildRelease({ version: "5.0.0", sourceCommit: "old", tree: SEED_TREE });
+    const slice = durableSlice(store.state);
+    slice.loadedRelease = old;
+    slice.releases = [old];
+    const aligned = applyDurableSlice(store.state, slice);
+    assert.equal(aligned.loadedRelease?.version, KERNEL_VERSION);
+    assert.equal(aligned.releases.some((r) => r.version === "5.0.0"), true);
+    assert.equal(aligned.grants.length >= 1, true);
+    const missing = { ...slice, grants: undefined };
+    const kept = applyDurableSlice(store.state, missing);
+    assert.equal(kept.grants.length >= 1, true);
+  });
+
+  it("classifies please-grant, blocks pending execute, and keeps live off the OS allowlist", async () => {
+    const { executeApprovedAction } = await import("./credentials.ts");
+    const { KERNEL_VERSION } = await import("./types.ts");
+    assert.equal(KERNEL_VERSION, "8.0.0");
+    assert.equal(
+      classifyIntent("Please grant Maya warehouse.query for investigate-metric."),
+      "grant_issue",
+    );
+    assert.equal(osPolicySet().tools.includes("warehouse.live"), false);
+    const store = new KernelStore();
+    const pending = await runWork(store, {
+      principalId: "prin_maya",
+      message:
+        "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'integrity')",
+    });
+    assert.equal(pending.status, "needs_approval");
+    const exec = executeApprovedAction(store, {
+      approvalId: pending.approvals[0].approvalId,
+      actorId: "prin_jordan",
+    });
+    assert.equal(exec.execution, "denied");
+    assert.equal(typeof store.applyGrant, "function");
   });
 });

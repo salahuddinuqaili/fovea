@@ -10,7 +10,7 @@ import { KernelStore, makePersonalNote } from "./store.ts";
 import { dryRunSql, executeReadSql, lintSql, readRepo, readTicket, wrapToolCall } from "./tools.ts";
 import { validateSandboxWriteSql } from "./sql.ts";
 import { connectLiveWarehouse } from "./warehouse.ts";
-import { findGrant, grantContinuesReads, grantHoursLeft, issueGrant, matchingGrant, parseGrantRequest, parseRevokeRequest, revokeGrant, shadowStageD } from "./grants.ts";
+import { findGrant, grantContinuesReads, grantHoursLeft, isGrantActive, issueGrant, matchingGrant, parseGrantRequest, parseRevokeRequest, revokeGrant, shadowStageD } from "./grants.ts";
 import type {
   Approval,
   NextAction,
@@ -27,7 +27,7 @@ const INJECTION =
   /ignore (all )?(previous|prior|system) (instructions|rules|policy)|bypass (the )?policy|you are now|exfiltrat|dump .{0,80}(to my laptop|to disk|customers table)|disable (the )?(audit|policy|guardrail)|install (an? )?(unofficial |slack )?(plugin|mcp)|reveal (all )?(secrets|credentials)/i;
 
 const WRITE_ASK =
-  /\b(insert into|update\s+\w+|delete from|drop table|truncate|overwrite (the )?table|grant |alter table|push to prod|merge the (branch|pr)|send (a )?slack|email everyone)\b/i;
+  /\b(insert into|update\s+\w+|delete from|drop table|truncate|overwrite (the )?table|grant\s+(select|insert|update|all|usage|execute)|alter table|push to prod|merge the (branch|pr)|send (a )?slack|email everyone)\b/i;
 
 export type Intent =
   | "injection"
@@ -61,8 +61,8 @@ export function classifyIntent(text: string): Intent {
   if (/another user'?s memory|maya'?s (private|personal) (notes|memory)|cross-user/i.test(t)) return "memory_probe";
   if (/connect (the )?(live|production) warehouse|query (the )?live warehouse|arm live (warehouse|dsn)/i.test(t))
     return "live_warehouse";
-  if (/^revoke\s+/i.test(t)) return "grant_revoke";
-  if (/^grant\s+/i.test(t)) return "grant_issue";
+  if (/\brevoke\s+/i.test(t)) return "grant_revoke";
+  if (/\bgrant\s+[a-z]+\s+\S+\s+for\s+/i.test(t)) return "grant_issue";
   if (/backfill|rerun (the )?(last|past|affected)|reprocess partition/i.test(t)) return "backfill";
   if ((WRITE_ASK.test(t) || /\bwrite .{0,60}sandbox\./i.test(t)) && /\bsandbox\./i.test(t)) return "sandbox_write";
   if (WRITE_ASK.test(t)) return "write";
@@ -200,7 +200,7 @@ export async function runWork(
       behaviors,
       approvals,
       toolCalls,
-      nextAction: nextActionFor(partial.status, intent, approvals, behaviors),
+      nextAction: nextActionFor(partial.status, intent, approvals, behaviors, store, principal.id),
       evidencePack: null,
       createdAt: started,
       finishedAt: new Date().toISOString(),
@@ -650,6 +650,7 @@ async function runMetric(store: KernelStore, ctx: WorkCtx): Promise<Pick<WorkRes
     tables: job.tables,
     partitions: job.rows.map((r) => String(r.week_start ?? "")),
     executedAt: job.executedAt,
+    sql,
   });
   provenance.metricDefinitions.push(metric.id);
   behaviors.push("query_executed_read_only", "provenance_complete");
@@ -698,6 +699,7 @@ async function runMetric(store: KernelStore, ctx: WorkCtx): Promise<Pick<WorkRes
         tables: sibJob.tables,
         partitions: sibJob.rows.map((r) => String(r.week_start ?? "")),
         executedAt: sibJob.executedAt,
+        sql: sibSql,
       });
       provenance.metricDefinitions.push(sib.id);
       const sibLast = sibJob.rows[sibJob.rows.length - 1];
@@ -756,6 +758,7 @@ function runSql(ctx: WorkCtx & { store: KernelStore; principalId: string }): Pic
     tables: job.tables,
     partitions: [],
     executedAt: job.executedAt,
+    sql: extracted,
   });
   behaviors.push("sql_validated", "query_executed_read_only");
   emit("tool.executed", "warehouse.query");
@@ -887,6 +890,7 @@ function runIncident(store: KernelStore, ctx: WorkCtx): Pick<WorkResult, "status
       tables: job.tables,
       partitions: job.rows.map((r) => String(r.week_start ?? "")),
       executedAt: job.executedAt,
+      sql,
     });
     provenance.metricDefinitions.push(id);
     const last = job.rows[job.rows.length - 1];
@@ -1020,8 +1024,7 @@ function runGrantRevoke(
       },
     };
   }
-  store.state.grants = store.state.grants.map((g) => (g.id === retracted.grant.id ? retracted.grant : g));
-  if (!store.state.grants.some((g) => g.id === retracted.grant.id)) store.state.grants.unshift(retracted.grant);
+  store.applyGrant(retracted.grant);
   store.emit({
     taskId: null,
     sessionId: null,
@@ -1094,6 +1097,8 @@ function nextActionFor(
   intent: Intent,
   approvals: Approval[],
   behaviors: string[] = [],
+  store?: KernelStore,
+  _actorId?: string,
 ): NextAction | null {
   if (status === "needs_approval") {
     const hash = approvals[0]?.proposedActionHash.slice(0, 12);
@@ -1130,10 +1135,14 @@ function nextActionFor(
     };
   }
   if (status === "completed" && intent === "grant_issue") {
+    const grant = store?.state.grants.find((g) => isGrantActive(g));
+    const who = store?.principal(grant?.principalId ?? "prin_maya");
+    const first = who?.displayName.split(" ")[0] ?? "Maya";
     return {
-      label: "Ask north-star as Maya",
-      href: "/work?q=" + encodeURIComponent("What was north-star revenue last week?"),
-      hint: "Switch the header to Maya Chen first. Her named read continues; this is not a global switch.",
+      label: `Open ${first}’s work`,
+      href: "/work",
+      hint: `Switch the header to ${who?.displayName ?? "Maya Chen"}. Command and Work will show the grant before they ask. Do not run it as the issuer.`,
+      asPrincipalId: grant?.principalId ?? "prin_maya",
     };
   }
   if (status === "completed" && intent === "grant_revoke") {

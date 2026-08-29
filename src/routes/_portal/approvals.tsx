@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { decideApprovalFn, executeApprovedFn, listApprovalsFn } from "@/lib/api";
+import { bootstrapFn, decideApprovalFn, executeApprovedFn, listApprovalsFn } from "@/lib/api";
 import { useFoveaSession } from "@/lib/session";
 import { formatUsd, shortId } from "@/lib/utils";
 
@@ -13,7 +13,11 @@ export const Route = createFileRoute("/_portal/approvals")({ component: Approval
 function ApprovalsPage() {
   const actorId = useFoveaSession((s) => s.principalId);
   const qc = useQueryClient();
+  const boot = useQuery({ queryKey: ["bootstrap"], queryFn: () => bootstrapFn() });
   const q = useQuery({ queryKey: ["approvals"], queryFn: () => listApprovalsFn() });
+  const actor = boot.data?.principals.find((p) => p.id === actorId);
+  const canDecide = Boolean(actor?.roles.includes("approver") || actor?.roles.includes("os_owner"));
+  const names = new Map((boot.data?.principals ?? []).map((p) => [p.id, p.displayName]));
   const mut = useMutation({
     mutationFn: (d: { approvalId: string; decision: "approved" | "denied" }) =>
       decideApprovalFn({ data: { ...d, actorId } }),
@@ -37,7 +41,7 @@ function ApprovalsPage() {
       <PageHeader
         kicker="Operate"
         title="Approvals"
-        description="Approvals bind to an exact action hash. Switch to Jordan Hale to decide. Sandbox writes mint a short-lived credential and execute. Production stays disabled."
+        description="Approvals bind to an exact action hash. Switch to Jordan Hale to decide. A pending approval cannot mint a credential. Production stays disabled."
       />
       <div className="space-y-3 p-4 md:p-8">
         {(q.data ?? []).length === 0 ? (
@@ -55,7 +59,7 @@ function ApprovalsPage() {
                     {a.approvalId} · hash {shortId(a.proposedActionHash, 12)} · {formatUsd(a.estimatedCost)}
                   </div>
                   <div className="mt-1 text-[11px] text-subtle">
-                    {String(a.approvedConstraints.kind ?? "action")}
+                    Requested by {names.get(a.requestedBy) ?? a.requestedBy}
                     {a.approvedConstraints.table ? ` · ${String(a.approvedConstraints.table)}` : ""}
                     {a.credentialId ? ` · cred ${shortId(a.credentialId, 10)}` : ""}
                   </div>
@@ -65,29 +69,35 @@ function ApprovalsPage() {
                 </Badge>
               </div>
               {a.decision === "pending" ? (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Button size="sm" onClick={() => mut.mutate({ approvalId: a.approvalId, decision: "approved" })}>
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => mut.mutate({ approvalId: a.approvalId, decision: "denied" })}
-                  >
-                    Deny
-                  </Button>
-                </div>
-              ) : (
-                <div className="mt-3 space-y-2">
-                  <p className="text-xs text-muted">
-                    Decided by {a.approver ?? "—"}. {a.executionNote || executionCopy(a.executionStatus)}
-                  </p>
-                  {a.decision === "approved" && String(a.approvedConstraints.kind) === "sandbox_write" ? (
+                canDecide ? (
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <Button size="sm" onClick={() => mut.mutate({ approvalId: a.approvalId, decision: "approved" })}>
+                      Approve
+                    </Button>
                     <Button
                       size="sm"
                       variant="secondary"
-                      onClick={() => replay.mutate(a.approvalId)}
+                      onClick={() => mut.mutate({ approvalId: a.approvalId, decision: "denied" })}
                     >
+                      Deny
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-xs text-muted">
+                    Acting as {actor?.displayName ?? actorId}. Switch to Jordan Hale (approver) to decide this hash.
+                    Analysts cannot mint write credentials.
+                  </p>
+                )
+              ) : (
+                <div className="mt-3 space-y-2">
+                  <p className="text-xs text-muted">
+                    Decided by {names.get(a.approver ?? "") ?? a.approver ?? "—"}.{" "}
+                    {a.executionNote || executionCopy(a.executionStatus)}
+                  </p>
+                  {canDecide &&
+                  a.decision === "approved" &&
+                  String(a.approvedConstraints.kind) === "sandbox_write" ? (
+                    <Button size="sm" variant="secondary" onClick={() => replay.mutate(a.approvalId)}>
                       Replay sandbox write
                     </Button>
                   ) : null}
@@ -106,5 +116,6 @@ function executionCopy(status: string) {
   if (status === "sandbox_replayed") return "Idempotent replay — no additional rows.";
   if (status === "disabled_prod") return "Production execution remains disabled.";
   if (status === "blocked_hash_mismatch") return "Hash mismatch. No credential minted.";
+  if (status === "denied") return "Pending or denied. No credential minted.";
   return "No write executed.";
 }

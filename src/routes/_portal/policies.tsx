@@ -11,7 +11,7 @@ import type { AutonomyGrant } from "@/kernel/types";
 
 export const Route = createFileRoute("/_portal/policies")({ component: PoliciesPage });
 
-const BUNDLE = `policy_version: 1.5.0
+const BUNDLE = `policy_version: 1.6.0
 autonomy:
   default_stage: B
   global_switch: false
@@ -26,6 +26,11 @@ autonomy:
     continue_selected_read: true
     chain_across_tasks: false
     desk_visible: true
+    issuer_visible: true
+control_plane:
+  snapshot_align: kernel_wins
+  pending_execute: deny
+  hydrate_failure: do_not_mark
 principles:
   permission_mode: intersection
   abstention_allowed: true
@@ -41,6 +46,7 @@ warehouse:
   live:
     registered: true
     default_allow: false
+    os_allowlist: false
     writes: disabled
 signing:
   kms: required

@@ -26,6 +26,9 @@ const JOURNEYS = [
   { title: "Live warehouse", body: "The adapter is registered and gated. No DSN, no principal allowlist, writes disabled." },
   { title: "Grant desk", body: "Alex issues a named grant. Maya cannot. The grant is stored and does not promote Stage D." },
   { title: "Grant lifecycle", body: "The grant covers Maya’s named metric. A duplicate is refused. Revoke ends coverage. Stage D stays unpromoted." },
+  { title: "Grant continuation", body: "A covered investigate-metric continues with sibling canonical reads in the same task. Writes stay hash-bound." },
+  { title: "Grant visible", body: "Command and Work show the covering grant before Maya asks. Alex’s desk lists the same grant. Next actions do not run as the issuer." },
+  { title: "Control integrity", body: "An old snapshot cannot replace the running kernel. Pending execute is denied. warehouse.live stays off the OS allowlist." },
 ];
 
 function AboutPage() {
@@ -44,7 +47,7 @@ function AboutPage() {
         </Link>
       </header>
       <main className="mx-auto max-w-5xl px-5 pb-24">
-        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v7.0</p>
+        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v8.0</p>
         <h1 className="mt-3 max-w-3xl font-display text-5xl leading-tight tracking-tight md:text-7xl">
           Accuracy at the center.
         </h1>

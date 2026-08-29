@@ -19,7 +19,7 @@ import type {
   WorkResult,
   WriteCredential,
 } from "./types.ts";
-import { AGENT_RELEASE, POLICY_VERSION } from "./types.ts";
+import { AGENT_RELEASE, KERNEL_VERSION, POLICY_VERSION } from "./types.ts";
 import { isGrantActive } from "./grants.ts";
 
 export interface KernelState {
@@ -56,8 +56,8 @@ export function emptyKill(): KillSwitchState {
 
 export function seedState(): KernelState {
   const release = buildRelease({
-    version: "7.0.0",
-    sourceCommit: "v70desk01",
+    version: KERNEL_VERSION,
+    sourceCommit: "v80align01",
     tree: SEED_TREE,
   });
   return {
@@ -239,13 +239,21 @@ export class KernelStore {
       (g) => !(isGrantActive(g) && g.principalId === grant.principalId && g.tool === grant.tool && g.task === grant.task),
     );
     this.state.grants.unshift(grant);
+    this.state.grants = pruneGrants(this.state.grants);
   }
 
   applyGrant(grant: AutonomyGrant) {
     const i = this.state.grants.findIndex((g) => g.id === grant.id);
     if (i >= 0) this.state.grants[i] = grant;
     else this.state.grants.unshift(grant);
+    this.state.grants = pruneGrants(this.state.grants);
   }
+}
+
+function pruneGrants(grants: AutonomyGrant[]): AutonomyGrant[] {
+  const active = grants.filter((g) => isGrantActive(g));
+  const inactive = grants.filter((g) => !isGrantActive(g)).slice(0, 12);
+  return [...active, ...inactive];
 }
 
 const g = globalThis as typeof globalThis & {
@@ -255,8 +263,18 @@ const g = globalThis as typeof globalThis & {
 
 export function getStore(): KernelStore {
   if (!g.__foveaStore) g.__foveaStore = new KernelStore();
-  g.__foveaStore.state = normalizeState(g.__foveaStore.state);
+  else if (typeof g.__foveaStore.applyGrant !== "function" || typeof g.__foveaStore.addGrant !== "function") {
+    g.__foveaStore = new KernelStore(g.__foveaStore.state);
+  }
+  g.__foveaStore.state = alignLoadedRelease(normalizeState(g.__foveaStore.state));
   return g.__foveaStore;
+}
+
+function alignLoadedRelease(state: KernelState): KernelState {
+  if (state.loadedRelease?.version === KERNEL_VERSION) return state;
+  const fresh = buildRelease({ version: KERNEL_VERSION, sourceCommit: "v80align01", tree: SEED_TREE });
+  const releases = [fresh, ...(state.releases ?? []).filter((r) => r.version !== KERNEL_VERSION)];
+  return { ...state, loadedRelease: fresh, releases, loadError: null };
 }
 
 export function resetStore() {

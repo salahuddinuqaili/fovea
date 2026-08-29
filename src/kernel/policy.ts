@@ -137,7 +137,6 @@ export function osPolicySet(): PermissionSet {
       "pipeline.graph",
       "pipeline.dry_run",
       "warehouse.sandbox_write",
-      "warehouse.live",
     ],
     dataClasses: ["public", "internal", "confidential", "restricted"],
     resources: ["*"],
@@ -262,7 +261,7 @@ export function environmentSet(env: string): PermissionSet {
   if (env === "prod") {
     return {
       actions: ["read", "analyze", "plan", "propose_write", "write", "execute_write", "approve"],
-      tools: [...GOVERNED_TOOLS, "warehouse.live"],
+      tools: [...GOVERNED_TOOLS],
       dataClasses: ["internal", "confidential", "restricted"],
       resources: ["*"],
     };

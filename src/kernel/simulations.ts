@@ -484,6 +484,66 @@ async function grantDeskVisible(store: KernelStore): Promise<Omit<SimulationResu
   };
 }
 
+async function controlIntegrity(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const { applyDurableSlice, durableSlice } = await import("./durable.ts");
+  const { osPolicySet } = await import("./policy.ts");
+  const { executeApprovedAction } = await import("./credentials.ts");
+  const { classifyIntent } = await import("./orchestrator.ts");
+  const { KERNEL_VERSION } = await import("./types.ts");
+  const { buildRelease, SEED_TREE } = await import("./release.ts");
+  const old = buildRelease({ version: "5.0.0", sourceCommit: "old", tree: SEED_TREE });
+  const slice = durableSlice(store.state);
+  slice.loadedRelease = old;
+  slice.releases = [old];
+  const aligned = applyDurableSlice(store.state, slice);
+  const missingGrants = { ...slice, grants: undefined };
+  const kept = applyDurableSlice({ ...store.state, grants: store.state.grants }, missingGrants);
+  const please = classifyIntent("Please grant Maya warehouse.query for investigate-metric.");
+  const issued = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Please grant Maya warehouse.query for investigate-metric.",
+  });
+  const views = store.state.grants.filter((g) => isGrantActive(g));
+  const pending = await runWork(store, {
+    principalId: "prin_maya",
+    message:
+      "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'integrity')",
+  });
+  let pendingBlocked = false;
+  if (pending.approvals[0]) {
+    const exec = executeApprovedAction(store, {
+      approvalId: pending.approvals[0].approvalId,
+      actorId: "prin_jordan",
+    });
+    pendingBlocked = exec.execution === "denied";
+  }
+  const nextHref = issued.nextAction?.href ?? "";
+  const steps = [
+    step("kernel_wins", aligned.loadedRelease?.version === KERNEL_VERSION, aligned.loadedRelease?.version ?? "none"),
+    step("old_kept", aligned.releases.some((r) => r.version === "5.0.0"), String(aligned.releases.length)),
+    step("missing_grants_kept", Array.isArray(kept.grants), String(kept.grants.length)),
+    step("please_grant", please === "grant_issue", please),
+    step("please_issued", issued.status === "completed", issued.status),
+    step("issuer_visible", views.length === 1 && views[0].principalId === "prin_maya", String(views.length)),
+    step("live_not_on_os", osPolicySet().tools.includes("warehouse.live") === false, "ok"),
+    step("pending_blocked", pendingBlocked, "ok"),
+    step("apply_grant", typeof store.applyGrant === "function", "ok"),
+    step("next_no_q", nextHref === "/work", nextHref),
+    step("as_principal", issued.nextAction?.asPrincipalId === "prin_maya", issued.nextAction?.asPrincipalId ?? "none"),
+    step("not_promoted", issued.behaviors.includes("no_self_promotion"), "ok"),
+  ];
+  return {
+    id: "sim_control_integrity",
+    title: "Control plane integrity",
+    persona: "Alex Voss → Jordan Hale",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: steps.every((s) => s.passed)
+      ? []
+      : ["Snapshot, pending execute, or issuer desk did not stay honest."],
+  };
+}
+
 const RUNNERS = [
   analystMorning,
   sandboxWriteLoop,
@@ -497,6 +557,7 @@ const RUNNERS = [
   grantLifecycle,
   grantContinuation,
   grantDeskVisible,
+  controlIntegrity,
 ];
 
 export async function runOperatorSimulations(): Promise<{

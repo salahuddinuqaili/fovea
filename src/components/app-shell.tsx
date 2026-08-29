@@ -65,8 +65,18 @@ const NAV = [
 ];
 
 function distinctiveRole(roles: string[]) {
-  const order = ["os_owner", "security_owner", "auditor", "approver", "eval_owner", "team_maintainer", "analyst"];
-  return order.find((r) => roles.includes(r)) ?? roles[0] ?? "principal";
+  const labels: Record<string, string> = {
+    os_owner: "OS owner",
+    security_owner: "Security",
+    auditor: "Auditor",
+    approver: "Approver",
+    eval_owner: "Eval owner",
+    team_maintainer: "Team",
+    analyst: "Analyst",
+  };
+  const order = Object.keys(labels);
+  const hit = order.find((r) => roles.includes(r)) ?? roles[0] ?? "principal";
+  return labels[hit] ?? hit.replace(/_/g, " ");
 }
 
 const MOBILE_PRIMARY = NAV[0].items.slice(0, 4);

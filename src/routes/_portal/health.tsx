@@ -31,23 +31,25 @@ function HealthPage() {
       <PageHeader
         kicker="Govern"
         title="Health"
-        description="Revocation does not require a source deployment. Switch to Sam Okonkwo (security) to use the kill switches."
+        description="The running kernel’s signed release wins when the snapshot lags. Kill switches revoke without a redeploy. Switch to Sam Okonkwo (security) to use them."
       />
       <div className="grid gap-4 p-4 md:grid-cols-3 md:p-8">
         <Card k="OS" v={h?.os ?? "—"} tone={h?.os === "up" ? "ok" : "danger"} />
         <Card k="Write plane" v={h?.writePlane ?? "—"} tone={h?.writePlane !== "disabled" ? "ok" : "danger"} />
-        <Card k="Pending approvals" v={String(h?.pendingApprovals ?? 0)} tone="ok" />
+        <Card k="Kernel" v={h?.kernel ?? "—"} tone="ok" />
+        <Card
+          k="Snapshot"
+          v={h?.aligned ? "Aligned" : (h?.snapshotVersion ?? "lagging")}
+          tone={h?.aligned ? "ok" : "warn"}
+        />
         <Card k="KMS" v={h?.kms?.ok ? "Verified" : "Blocked"} tone={h?.kms?.ok ? "ok" : "danger"} />
         <Card
           k="Live warehouse"
           v={liveConnected ? "Connected" : "Gated"}
           tone={!liveWritesOff ? "danger" : liveConnected ? "ok" : "warn"}
         />
-        <Card
-          k="Active grants"
-          v={String(h?.activeGrants ?? 0)}
-          tone="ok"
-        />
+        <Card k="Pending approvals" v={String(h?.pendingApprovals ?? 0)} tone="ok" />
+        <Card k="Active grants" v={String(h?.activeGrants ?? 0)} tone="ok" />
       </div>
       <div className="flex flex-wrap gap-2 px-4 md:px-8">
         <Button variant="secondary" onClick={() => mut.mutate({ writePlane: true })}>
@@ -84,6 +86,23 @@ function HealthPage() {
                 <Badge tone={t.status === "approved" ? "ok" : "danger"}>{t.status}</Badge>
               </li>
             ))}
+          </ul>
+        </section>
+        <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:col-span-2">
+          <h2 className="text-sm font-medium">Named grants</h2>
+          <ul className="mt-3 space-y-2 text-sm">
+            {(h?.activeGrantViews ?? []).length === 0 ? (
+              <li className="text-muted">None active. Issue one from Policy as Alex or Sam.</li>
+            ) : (
+              (h?.activeGrantViews ?? []).map((g) => (
+                <li key={g.id} className="flex justify-between gap-3">
+                  <span className="truncate">
+                    {g.principalName} · {g.tool} / {g.task}
+                  </span>
+                  <Badge tone="ok">{g.continuesReads ? "continues" : "named"}</Badge>
+                </li>
+              ))
+            )}
           </ul>
         </section>
       </div>

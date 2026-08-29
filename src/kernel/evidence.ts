@@ -8,6 +8,13 @@ export function toEvidencePack(result: WorkResult): EvidencePack {
     claim: result.answer?.text ?? "",
     citations: result.answer?.citations ?? [],
     queryHashes: result.provenance?.queries.map((q) => q.queryHash) ?? [],
+    queries: (result.provenance?.queries ?? []).map((q, i) => ({
+      jobId: q.jobId,
+      queryHash: q.queryHash,
+      tables: q.tables,
+      metric: result.provenance?.metricDefinitions[i],
+      sql: q.sql,
+    })),
     metrics: result.provenance?.metricDefinitions ?? [],
     policyDecisions: result.policy.map((p) => p.decision),
     agentRelease: result.provenance?.agentRelease ?? AGENT_RELEASE,
