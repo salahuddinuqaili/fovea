@@ -6,6 +6,7 @@ import { seedSandbox, type SandboxState } from "./sandbox.ts";
 import type {
   Approval,
   AuditEvent,
+  BackfillPlan,
   CostRecord,
   ImprovementEvent,
   KillSwitchState,
@@ -52,8 +53,8 @@ export function emptyKill(): KillSwitchState {
 
 export function seedState(): KernelState {
   const release = buildRelease({
-    version: "1.1.0",
-    sourceCommit: "e8a14c9b3f01",
+    version: "2.0.0",
+    sourceCommit: "v2adapters01",
     tree: SEED_TREE,
   });
   return {
@@ -74,11 +75,25 @@ export function seedState(): KernelState {
   };
 }
 
+function normalizePlan(p: BackfillPlan): BackfillPlan {
+  return {
+    ...p,
+    adapter: p.adapter ?? { id: "transform.dbt", label: "dbt Core (fixture)", runtime: "transform" },
+    partitionStates: p.partitionStates ?? [],
+    cost: p.cost ?? { expectedUsd: p.expectedCost, dryRunUsd: p.expectedCost, variancePct: 0 },
+    rollback: p.rollback ?? { strategy: "time_travel_partition", snapshots: [], haltDownstream: true },
+  };
+}
+
 function normalizeState(s: KernelState): KernelState {
   return {
     ...s,
     sessions: s.sessions ?? [],
-    tasks: (s.tasks ?? []).map((t) => ({ ...t, nextAction: t.nextAction ?? null })),
+    tasks: (s.tasks ?? []).map((t) => ({
+      ...t,
+      nextAction: t.nextAction ?? null,
+      plan: t.plan ? normalizePlan(t.plan) : t.plan,
+    })),
     events: s.events ?? [],
     approvals: s.approvals ?? [],
     memory: s.memory ?? [],

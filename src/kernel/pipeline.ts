@@ -1,5 +1,6 @@
 import { digestObject, uuid } from "./crypto.ts";
 import { PIPELINES } from "./fixtures.ts";
+import { adapterFor } from "./adapters.ts";
 import type { BackfillPlan, PipelineNode, RiskTier } from "./types.ts";
 
 export function getNode(id: string) {
@@ -70,6 +71,15 @@ export function planBackfill(input: {
   const expectedRows = partitions.length * (target === "fct_orders" ? 3200 : 1800);
   const expectedCost = Number((partitions.length * 4.8 + downstream.length * 6).toFixed(2));
   const riskTier: RiskTier = expectedCost > 80 || partitions.length > 14 ? 3 : 2;
+  const adapter = adapterFor(target);
+  const partitionStates = adapter.partitionState(target, partitions);
+  const dry = adapter.dryRun({
+    targetNodes: [target],
+    resolvedPartitions: partitions,
+    expectedCost,
+  });
+  const rollback = adapter.rollback({ targetNodes: [target], resolvedPartitions: partitions });
+  const variancePct = expectedCost === 0 ? 0 : Number((Math.abs(dry.actualUsd - expectedCost) / expectedCost * 100).toFixed(1));
   const draft: Omit<BackfillPlan, "planHash"> = {
     id: `bf_${uuid().slice(0, 8)}`,
     targetNodes: [target],
@@ -95,11 +105,15 @@ export function planBackfill(input: {
       "no schema changes",
       "test orders remain excluded from north-star revenue",
     ],
-    rollbackStrategy: "restore previous partition snapshots from time-travel; halt downstream on invariant fail",
+    rollbackStrategy: `${rollback.strategy}; halt downstream on invariant fail`,
+    rollback,
     monitoringChecks: ["run_status", "bytes_scanned", "failed_tests", "sla_drift"],
     riskTier,
     approvalRequired: true,
     status: "planned",
+    adapter: { id: adapter.id, label: adapter.label, runtime: adapter.runtime },
+    partitionStates,
+    cost: { expectedUsd: expectedCost, dryRunUsd: dry.actualUsd, variancePct },
   };
   const planHash = digestObject({
     target: draft.targetNodes,
@@ -107,6 +121,7 @@ export function planBackfill(input: {
     partitions: draft.resolvedPartitions,
     order: draft.dependencyOrder,
     overwrite: draft.overwriteBehavior,
+    adapter: draft.adapter.id,
   });
   return { ...draft, planHash };
 }

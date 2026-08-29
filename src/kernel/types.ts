@@ -241,6 +241,26 @@ export interface PipelineNode {
   lastRunAt?: string;
 }
 
+export interface PartitionState {
+  nodeId: string;
+  partition: string;
+  status: "current" | "stale" | "failed" | "missing";
+  lastSuccessAt: string | null;
+  rows: number;
+}
+
+export interface RollbackPlan {
+  strategy: "time_travel_partition" | "swap_table";
+  snapshots: string[];
+  haltDownstream: boolean;
+}
+
+export interface AdapterRef {
+  id: "transform.dbt" | "warehouse.scheduled_query";
+  label: string;
+  runtime: string;
+}
+
 export interface BackfillPlan {
   id: string;
   targetNodes: string[];
@@ -257,11 +277,15 @@ export interface BackfillPlan {
   dataQualityChecks: string[];
   businessInvariants: string[];
   rollbackStrategy: string;
+  rollback: RollbackPlan;
   monitoringChecks: string[];
   riskTier: RiskTier;
   approvalRequired: boolean;
   planHash: string;
   status: "planned" | "approved" | "blocked" | "execution_disabled";
+  adapter: AdapterRef;
+  partitionStates: PartitionState[];
+  cost: { expectedUsd: number; dryRunUsd: number; variancePct: number };
 }
 
 export interface ProvenanceRecord {
@@ -472,6 +496,6 @@ export interface QueryJob {
   dryRun: boolean;
 }
 
-export const AGENT_RELEASE = "fovea-1.1.0";
+export const AGENT_RELEASE = "fovea-2.0.0";
 export const POLICY_VERSION = "1.1.0";
 export const AGENT_ID = "analytics-investigator@1.0.0";

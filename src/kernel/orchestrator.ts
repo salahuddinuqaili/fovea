@@ -670,10 +670,11 @@ function runBackfill(
     plan,
     answer: {
       claimClass: "derived",
-      text: `Governed backfill plan ${plan.id} is ready. Targets ${plan.targetNodes.join(", ")} over ${plan.resolvedPartitions.length} partition(s). Downstream impact: ${plan.downstreamImpact.join(", ") || "none"}. Expected cost $${plan.expectedCost.toFixed(2)}. Policy: ${execPol.decision}. Approval binds to hash ${plan.planHash.slice(0, 12)}… Production backfill execution stays disabled in v1.`,
+      text: `Governed backfill plan ${plan.id} via ${plan.adapter.label}. Targets ${plan.targetNodes.join(", ")} over ${plan.resolvedPartitions.length} partition(s). Failed partitions: ${plan.partitionStates.filter((p) => p.status === "failed").map((p) => p.partition).join(", ") || "none"}. Downstream: ${plan.downstreamImpact.join(", ") || "none"}. Cost estimate $${plan.cost.expectedUsd.toFixed(2)}, dry-run $${plan.cost.dryRunUsd.toFixed(2)} (${plan.cost.variancePct}% variance). Rollback: ${plan.rollback.strategy}. Policy: ${execPol.decision}. Approval binds to hash ${plan.planHash.slice(0, 12)}… Adapter.execute() is disabled — production backfill will not run.`,
       citations: [
         { label: "backfill plan", kind: "pipeline", ref: plan.id },
         { label: "plan hash", kind: "provenance", ref: plan.planHash },
+        { label: plan.adapter.id, kind: "pipeline", ref: plan.adapter.id },
       ],
     },
   };

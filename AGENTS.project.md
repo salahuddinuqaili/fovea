@@ -2,7 +2,7 @@
 
 This is an **open-source Agentic OS** (name: **Fovea**). Continue in place. Do not scaffold a new app.
 
-## Current version: v1.1.0 — Operator UX + Stage C sandbox writes
+## Current version: v2.0.0 — Adapters + shadow autonomy (prod exec still off)
 
 Locked defaults:
 
@@ -29,7 +29,7 @@ See README “principles” and the original implementation guide. Intersection 
 
 ## Next versions (do these, don’t rebuild)
 
-- **v2** — real pipeline adapters, approval → short-lived write credential for governed production backfills, still no prod backfill exec until gates pass
+- **v2 (this tree)** — pipeline adapters, partition state, cost vs dry-run, rollback, shadow eval. Production backfill exec still disabled.
 - **v3** — SSO, KMS signing, live warehouse adapter behind policy
 
 Keep the portal on `0.0.0.0:8080` via `npm run dev` and `startup.sh`.

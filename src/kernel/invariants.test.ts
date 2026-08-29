@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("1.1.0");
+    const report = await runEvalSuite("2.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -197,5 +197,22 @@ describe("operator simulations", () => {
         2,
       ),
     );
+  });
+});
+
+describe("v2 adapters", () => {
+  it("two adapters exist and cannot execute production", async () => {
+    const { listAdapters, adapterFor } = await import("./adapters.ts");
+    const adapters = listAdapters();
+    assert.equal(adapters.length, 2);
+    assert.ok(adapters.every((a) => a.execute.ok === false));
+    const store = new KernelStore();
+    const r = await runWork(store, {
+      principalId: "prin_maya",
+      message: "Backfill the affected partitions after the upstream correction.",
+    });
+    assert.ok(r.plan?.adapter.id);
+    assert.ok((r.plan?.partitionStates.length ?? 0) > 0);
+    assert.equal(adapterFor("fct_orders").execute().reason, "production_execution_disabled");
   });
 });

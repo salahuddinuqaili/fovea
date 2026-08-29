@@ -20,11 +20,11 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - GitHub Pages site in `/docs`
 - README rewritten for operators and contributors
 
-## v2 — Governed production backfills (still approval-gated)
+## v2 — Governed production backfills (this tree)
 
-- Pipeline adapters for at least two native systems
-- Partition state, cost estimator vs actual, rollback
-- Shadow evaluation of candidate autonomy
+- Pipeline adapters for two native systems: dbt Core (fixture) and warehouse scheduled query
+- Partition state, dry-run cost vs estimate, structured rollback
+- Shadow evaluation of candidate Stage C autonomy — never promotes itself
 - Production execution remains disabled until gates pass
 
 ## v3 — Selected Stage D workflows

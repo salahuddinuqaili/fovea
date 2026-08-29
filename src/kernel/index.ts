@@ -5,6 +5,7 @@ import { listModels, xaiAvailable } from "./models.ts";
 import { decideApproval, runWork, savePersonalSkill } from "./orchestrator.ts";
 import { evaluatePolicy } from "./policy.ts";
 import { listNodes } from "./pipeline.ts";
+import { listAdapters } from "./adapters.ts";
 import { tamper, unsigned, verifyRelease } from "./release.ts";
 import { getStore, resetStore, type KernelStore } from "./store.ts";
 import { runEvalSuite } from "./evals.ts";
@@ -37,6 +38,7 @@ export function bootstrap() {
     tools: TOOLS,
     models: listModels(),
     pipelines: listNodes(),
+    adapters: listAdapters(),
     skillCount: store.state.skills.length,
     taskCount: store.state.tasks.length,
     pendingApprovals: store.state.approvals.filter((a) => a.decision === "pending").length,
@@ -133,7 +135,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("1.1.0");
+  return runEvalSuite("2.0.0");
 }
 
 export async function runSimulations() {
@@ -201,8 +203,9 @@ export function health() {
     eventCount: store.state.events.length,
     sandboxWrites: store.state.sandbox.writes.length,
     credentials: store.state.credentials.length,
+    adapters: listAdapters(),
   };
 }
 
-export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations };
+export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters };
 export type { KernelStore };

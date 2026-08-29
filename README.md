@@ -6,7 +6,7 @@ Fovea is an open-source **Agentic Operating System for data analytics**. It is n
 
 Website: [salahuddinuqaili.github.io/fovea](https://salahuddinuqaili.github.io/fovea/)
 
-v1.1 ships **Stage B principals + a Stage C sandbox write path + an operator UX that was beaten on five simulated desks**. Agents may read and analyze autonomously. Every write requires a human approval bound to an exact action hash. After approval, Fovea mints a short-lived credential and will execute **only** against `sandbox.*`. Production execution stays disabled.
+v2 ships **Stage B principals + Stage C sandbox writes + governed backfill adapters**. Agents may read and analyze autonomously. Every write requires a human approval bound to an exact action hash. After approval, Fovea mints a short-lived credential and will execute **only** against `sandbox.*`. Production backfill adapters plan, dry-run, and refuse to execute.
 
 ## Why this exists
 
@@ -32,6 +32,7 @@ The kernel is the product. The portal is a client.
 | Models | Deterministic router; optional xAI when configured |
 | Memory | Isolated personal / team / org. Personal notes never hit the durable snapshot. |
 | Writes | Exact-hash approval → short-lived sandbox credential → idempotent execute |
+| Backfills | Two adapters (dbt + scheduled query): partition state, dry-run cost, rollback. Execute disabled. |
 | Releases | Ed25519 signed artifacts. Unsigned and tampered loads are rejected. |
 | Evals | Golden + adversarial suite. Hard gates cannot be averaged away. |
 | Simulations | Five operator journeys: analyst morning, sandbox loop, adversarial day, auditor shift, backfill plan-only |

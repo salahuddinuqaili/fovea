@@ -269,11 +269,19 @@ function EvidencePane({
         <Section title="Backfill plan">
           <dl className="grid grid-cols-2 gap-2 text-xs">
             <Field k="Hash" v={shortId(result.plan.planHash, 12)} />
-            <Field k="Cost" v={formatUsd(result.plan.expectedCost)} />
+            <Field k="Adapter" v={result.plan.adapter.label} />
+            <Field k="Estimate" v={formatUsd(result.plan.cost.expectedUsd)} />
+            <Field k="Dry-run" v={formatUsd(result.plan.cost.dryRunUsd)} />
+            <Field k="Variance" v={`${result.plan.cost.variancePct}%`} />
+            <Field k="Rollback" v={result.plan.rollback.strategy} />
             <Field k="Partitions" v={String(result.plan.resolvedPartitions.length)} />
             <Field k="Risk" v={`T${result.plan.riskTier}`} />
           </dl>
           <p className="mt-2 text-xs text-muted">Downstream: {result.plan.downstreamImpact.join(", ") || "none"}</p>
+          <p className="mt-1 text-xs text-muted">
+            Failed partitions:{" "}
+            {result.plan.partitionStates.filter((p) => p.status === "failed").map((p) => p.partition).join(", ") || "none"}
+          </p>
           <p className="mt-1 text-xs text-muted">Order: {result.plan.dependencyOrder.join(" → ")}</p>
         </Section>
       ) : null}
