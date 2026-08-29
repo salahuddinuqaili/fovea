@@ -582,7 +582,7 @@ export interface InboxApprovalView {
   estimatedCost: number;
 }
 
-export const KERNEL_VERSION = "10.0.0";
-export const AGENT_RELEASE = "fovea-10.0.0";
-export const POLICY_VERSION = "1.8.0";
+export const KERNEL_VERSION = "11.0.0";
+export const AGENT_RELEASE = "fovea-11.0.0";
+export const POLICY_VERSION = "1.9.0";
 export const AGENT_ID = "analytics-investigator@1.0.0";

@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("10.0.0");
+    const report = await runEvalSuite("11.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,9 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all fifteen journeys pass", async () => {
+  it("all sixteen journeys pass", async () => {
     const report = await runOperatorSimulations();
-    assert.equal(report.simulations.length, 15);
+    assert.equal(report.simulations.length, 16);
     assert.equal(
       report.passed,
       true,
@@ -469,7 +469,7 @@ describe("v8 honest control plane", () => {
   it("classifies please-grant, blocks pending execute, and keeps live off the OS allowlist", async () => {
     const { executeApprovedAction } = await import("./credentials.ts");
     const { KERNEL_VERSION } = await import("./types.ts");
-    assert.equal(KERNEL_VERSION, "10.0.0");
+    assert.equal(KERNEL_VERSION, "11.0.0");
     assert.equal(
       classifyIntent("Please grant Maya warehouse.query for investigate-metric."),
       "grant_issue",
@@ -579,5 +579,29 @@ describe("v10 honest storage", () => {
     assert.equal(store.state.sandbox.tables["sandbox.metric_scratch"][0].note, "patched");
     const slice = durableSlice(store.state);
     assert.ok(slice.sandbox.writes.every((w) => w.row === null && !/insert into/i.test(w.sql)));
+  });
+});
+
+describe("v11 desk stays put", () => {
+  it("uses recipient-facing handoff labels and keeps covering grants beside the handoff", async () => {
+    const { incomingHandoffs } = await import("./handoffs.ts");
+    const { coveringGrants } = await import("./grants.ts");
+    const store = new KernelStore();
+    const insert = await runWork(store, {
+      principalId: "prin_maya",
+      message:
+        "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'v11')",
+    });
+    assert.equal(insert.status, "needs_approval");
+    const jordan = incomingHandoffs(store.state.handoffs, "prin_jordan");
+    assert.equal(jordan.some((h) => h.label === "Write from Maya"), true);
+    const issued = await runWork(store, {
+      principalId: "prin_alex",
+      message: "Grant Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(issued.status, "completed");
+    const maya = incomingHandoffs(store.state.handoffs, "prin_maya");
+    assert.equal(maya.some((h) => h.label === "Named grant from Alex"), true);
+    assert.equal(coveringGrants(store.state.grants, "prin_maya").length, 1);
   });
 });

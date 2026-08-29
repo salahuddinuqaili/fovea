@@ -184,6 +184,19 @@ export function featuredPlaybooks(roles: string[], ids: readonly string[]) {
 
 export type DeskHome = "analyst" | "approver" | "auditor" | "owner";
 
+/** Known demo desks — Command is desk-true before bootstrap returns. */
+export const DESKS: Record<string, { name: string; roles: string[] }> = {
+  prin_maya: { name: "Maya Chen", roles: ["analyst"] },
+  prin_jordan: { name: "Jordan Hale", roles: ["analyst", "approver", "team_maintainer"] },
+  prin_sam: { name: "Sam Okonkwo", roles: ["security_owner"] },
+  prin_riley: { name: "Riley Park", roles: ["auditor"] },
+  prin_alex: { name: "Alex Voss", roles: ["os_owner", "eval_owner", "platform_owner"] },
+};
+
+export function deskOf(principalId: string) {
+  return DESKS[principalId] ?? { name: "this desk", roles: ["analyst"] };
+}
+
 export function deskHome(roles: string[]): DeskHome {
   if (roles.includes("os_owner") || roles.includes("security_owner")) return "owner";
   if (roles.includes("approver")) return "approver";

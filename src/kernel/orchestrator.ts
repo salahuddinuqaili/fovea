@@ -14,6 +14,7 @@ import { findGrant, grantContinuesReads, grantHoursLeft, isGrantActive, issueGra
 import { makeHandoff } from "./handoffs.ts";
 import type {
   Approval,
+  DeskHandoff,
   NextAction,
   PolicyRequest,
   PolicyResponse,
@@ -1123,12 +1124,27 @@ function titleFor(intent: Intent, message: string) {
 function recordHandoffs(store: KernelStore, result: WorkResult) {
   const na = result.nextAction;
   if (!na?.asPrincipalId || na.asPrincipalId === result.principalId) return;
+  const fromName = store.principal(result.principalId)?.displayName ?? "another desk";
+  const first = fromName.split(" ")[0];
+  const kind: DeskHandoff["kind"] = na.href.includes("approvals")
+    ? "approval"
+    : na.href.includes("policies")
+      ? "policy"
+      : "work";
+  const grantish = result.behaviors.includes("grant_issued");
   store.addHandoff(
     makeHandoff({
       fromPrincipalId: result.principalId,
       toPrincipalId: na.asPrincipalId,
-      kind: na.href.includes("approvals") ? "approval" : na.href.includes("policies") ? "policy" : "work",
-      label: na.label,
+      kind,
+      label:
+        kind === "approval"
+          ? `Write from ${first}`
+          : kind === "policy"
+            ? `Policy from ${first}`
+            : grantish
+              ? `Named grant from ${first}`
+              : `From ${fromName}`,
       href: na.href,
       hint: na.hint,
       taskId: result.taskId,

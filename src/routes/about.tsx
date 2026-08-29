@@ -31,6 +31,7 @@ const JOURNEYS = [
   { title: "Control integrity", body: "An old snapshot cannot replace the running kernel. Pending execute is denied. warehouse.live stays off the OS allowlist." },
   { title: "Named desks", body: "Work stays this session. Maya’s write hands off to Jordan’s inbox. Alex is not a hidden approver. Denied writes are not queued. Command audit is role-gated." },
   { title: "Honest storage", body: "Personal memory is encrypted at rest. Team memory stays on the team. Sandbox UPDATE needs WHERE. The unowned snapshot does not keep sandbox SQL." },
+  { title: "Desk stays put", body: "A named handoff is a banner. Maya’s four-click first run stays. Labels face the recipient — Write from Maya, Named grant from Alex." },
 ];
 
 function AboutPage() {
@@ -49,7 +50,7 @@ function AboutPage() {
         </Link>
       </header>
       <main className="mx-auto max-w-5xl px-5 pb-24">
-        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v10.0</p>
+        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v11.0</p>
         <h1 className="mt-3 max-w-3xl font-display text-5xl leading-tight tracking-tight md:text-7xl">
           Accuracy at the center.
         </h1>

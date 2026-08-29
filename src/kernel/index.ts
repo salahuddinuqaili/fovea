@@ -240,7 +240,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("10.0.0");
+  return runEvalSuite("11.0.0");
 }
 
 export async function runSimulations() {
@@ -347,15 +347,14 @@ export function putGrant(
   if (!issued.ok) return issued;
   store.addGrant(issued.grant);
   if (issued.grant.principalId !== actorId) {
-    const who = store.principal(issued.grant.principalId);
     store.addHandoff(
       makeHandoff({
         fromPrincipalId: actorId,
         toPrincipalId: issued.grant.principalId,
         kind: "work",
-        label: `Open ${who?.displayName.split(" ")[0] ?? "grantee"}’s work`,
+        label: `Named grant from ${actor.displayName.split(" ")[0]}`,
         href: "/work",
-        hint: `Named grant ${issued.grant.tool} / ${issued.grant.task} is on this desk. It does not run as the issuer.`,
+        hint: `${issued.grant.tool} / ${issued.grant.task} is on this desk. It does not run as the issuer.`,
       }),
     );
   }

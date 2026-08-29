@@ -93,6 +93,12 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - Sandbox UPDATE/DELETE require a single equality WHERE. Snapshot SQL is redacted.
 - Fifteen operator simulations as a release input.
 
+## v11 — Desk stays put (this tree)
+
+- Command’s desk home never yields to the inbox. A named handoff is a banner.
+- Handoff labels face the recipient. Desk stats are role-true.
+- Sixteen operator simulations as a release input.
+
 ## Later — Accounts and a real warehouse DSN
 
 - SSO / accounts only when the user explicitly asks for them (Auth stays OFF until then)

@@ -60,7 +60,7 @@ export function emptyKill(): KillSwitchState {
 export function seedState(): KernelState {
   const release = buildRelease({
     version: KERNEL_VERSION,
-    sourceCommit: "v10honest01",
+    sourceCommit: "v11deskput01",
     tree: SEED_TREE,
   });
   return {

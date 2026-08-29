@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { bootstrapFn, openHandoffFn, overviewFn } from "@/lib/api";
-import { FIRST_RUN, COMMAND_FEATURED, featuredPlaybooks, deskHome } from "@/lib/playbooks";
+import { FIRST_RUN, COMMAND_FEATURED, featuredPlaybooks, deskHome, deskOf } from "@/lib/playbooks";
 import { useFoveaSession } from "@/lib/session";
 import { formatUsd } from "@/lib/utils";
 
@@ -21,11 +21,18 @@ function CommandCenter() {
   });
   const data = q.data;
   const verified = boot.data?.verification.ok ?? data?.verification.ok ?? false;
+  const desk = deskOf(principalId);
   const principal = boot.data?.principals.find((p) => p.id === principalId);
-  const books = featuredPlaybooks(principal?.roles ?? ["analyst"], COMMAND_FEATURED);
-  const home = deskHome(principal?.roles ?? ["analyst"]);
+  const roles = principal?.roles ?? desk.roles;
+  const displayName = principal?.displayName ?? desk.name;
+  const firstName = displayName.split(" ")[0];
+  const books = featuredPlaybooks(roles, COMMAND_FEATURED);
+  const home = deskHome(roles);
   const inbox = data?.inbox;
-  const hasInbox = Boolean((inbox?.handoffs.length ?? 0) + (inbox?.pendingForDesk.length ?? 0));
+  const pending = inbox?.pendingForDesk ?? [];
+  const handoffs = (inbox?.handoffs ?? []).filter((h) => !(h.kind === "approval" && pending.length > 0));
+  const hasHandoffs = handoffs.length > 0;
+  const stat = deskStat(home, pending.length, handoffs.length, data?.recentEvents.length ?? 0, boot.data?.activeGrants ?? 0);
   const openInbox = useMutation({
     mutationFn: (handoffId: string) => openHandoffFn({ data: { actorId: principalId, handoffId } }),
     onSuccess: (res) => {
@@ -75,7 +82,7 @@ function CommandCenter() {
           hint={autonomyHint(
             boot.data?.activeGrants ?? 0,
             q.data?.coveringGrants,
-            principal?.displayName,
+            displayName,
             boot.data?.activeGrantViews,
           )}
         />
@@ -84,15 +91,7 @@ function CommandCenter() {
           value={verified ? "Verified" : "Blocked"}
           hint={boot.data?.agentRelease ?? data?.release?.version ?? "—"}
         />
-        <Stat
-          label="This desk"
-          value={String((inbox?.handoffs.length ?? 0) + (inbox?.pendingForDesk.length ?? 0))}
-          hint={
-            (inbox?.pendingForDesk.length ?? 0) > 0
-              ? `${inbox!.pendingForDesk.length} pending hash${inbox!.pendingForDesk.length === 1 ? "" : "es"}`
-              : "Named handoffs, eight-hour TTL"
-          }
-        />
+        <Stat label={stat.label} value={stat.value} hint={stat.hint} />
         <Stat
           label="Budget left"
           value={formatUsd(data?.budgetRemainingUsd ?? 25, 2)}
@@ -100,29 +99,15 @@ function CommandCenter() {
         />
       </div>
 
-      {hasInbox ? (
+      {hasHandoffs ? (
         <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border-strong bg-surface p-5 md:mx-8">
-          <h2 className="text-sm font-medium">Waiting on {principal?.displayName.split(" ")[0] ?? "this desk"}</h2>
+          <h2 className="text-sm font-medium">Waiting on {firstName}</h2>
           <p className="mt-1 text-xs text-muted">
-            Named handoffs, not a global queue. Opening one switches this desk — it does not run as someone else.
+            Named handoffs, not a global queue. Opening one switches this desk — it does not run as someone else. This
+            desk’s home stays below.
           </p>
           <div className="mt-3 grid gap-2 md:grid-cols-2">
-            {(inbox?.pendingForDesk ?? []).map((a) => (
-              <Link
-                key={a.approvalId}
-                to="/approvals"
-                className="rounded-[var(--radius-md)] border border-border bg-bg p-4 hover:border-border-strong"
-              >
-                <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">
-                  Pending · {a.requestedByName}
-                </div>
-                <div className="mt-1 text-sm text-fg">{a.actionSummary}</div>
-                <div className="mt-1 font-mono text-[11px] text-muted">
-                  {a.hash.slice(0, 12)}… · {formatUsd(a.estimatedCost, 2)}
-                </div>
-              </Link>
-            ))}
-            {(inbox?.handoffs ?? []).map((h) => (
+            {handoffs.map((h) => (
               <button
                 key={h.id}
                 type="button"
@@ -138,13 +123,41 @@ function CommandCenter() {
             ))}
           </div>
         </section>
-      ) : home === "approver" ? (
+      ) : null}
+
+      {home === "approver" ? (
         <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
-          <h2 className="text-sm font-medium">Nothing waiting on this desk</h2>
-          <p className="mt-2 text-sm text-muted">
-            Switch to Maya Chen and propose a sandbox write. The exact hash lands here. You cannot approve a write you
-            requested.
-          </p>
+          {pending.length === 0 ? (
+            <>
+              <h2 className="text-sm font-medium">Nothing waiting on this desk</h2>
+              <p className="mt-2 text-sm text-muted">
+                Switch to Maya Chen and propose a sandbox write. The exact hash lands here. You cannot approve a write you
+                requested.
+              </p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-sm font-medium">Pending hashes</h2>
+              <p className="mt-1 text-xs text-muted">Exact-action approvals. You cannot decide a write you requested.</p>
+              <div className="mt-3 grid gap-2 md:grid-cols-2">
+                {pending.map((a) => (
+                  <Link
+                    key={a.approvalId}
+                    to="/approvals"
+                    className="rounded-[var(--radius-md)] border border-border bg-bg p-4 hover:border-border-strong"
+                  >
+                    <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">
+                      Pending · {a.requestedByName}
+                    </div>
+                    <div className="mt-1 text-sm text-fg">{a.actionSummary}</div>
+                    <div className="mt-1 font-mono text-[11px] text-muted">
+                      {a.hash.slice(0, 12)}… · {formatUsd(a.estimatedCost, 2)}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </>
+          )}
         </section>
       ) : home === "auditor" ? (
         <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
@@ -206,7 +219,7 @@ function CommandCenter() {
         <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="text-sm font-medium">Playbooks for {principal?.displayName ?? "this principal"}</h2>
+              <h2 className="text-sm font-medium">Playbooks for {firstName}</h2>
               <p className="mt-1 text-xs text-muted">Filtered by role. Press ⌘K to jump anywhere.</p>
             </div>
             <Link to="/work" className="flex items-center gap-1 text-xs text-muted hover:text-fg">
@@ -282,6 +295,41 @@ function CommandCenter() {
       </div>
     </div>
   );
+}
+
+function deskStat(
+  home: "analyst" | "approver" | "auditor" | "owner",
+  pending: number,
+  handoffs: number,
+  events: number,
+  grants: number,
+) {
+  if (home === "approver") {
+    return {
+      label: "Pending",
+      value: String(pending),
+      hint: pending === 0 ? "Nothing waiting" : `${pending} exact hash${pending === 1 ? "" : "es"}`,
+    };
+  }
+  if (home === "auditor") {
+    return {
+      label: "This stream",
+      value: String(events),
+      hint: "Append-only. Maya cannot open it.",
+    };
+  }
+  if (home === "owner") {
+    return {
+      label: "Named grants",
+      value: String(grants),
+      hint: grants === 0 ? "None active · selected workflow only" : "Selected workflows only · never a global switch",
+    };
+  }
+  return {
+    label: "This desk",
+    value: String(handoffs),
+    hint: handoffs === 0 ? "Named handoffs, eight-hour TTL" : `${handoffs} named handoff${handoffs === 1 ? "" : "s"} · eight-hour TTL`,
+  };
 }
 
 function autonomyHint(

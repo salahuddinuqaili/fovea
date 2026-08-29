@@ -50,6 +50,7 @@ Press **⌘K** (or **Ctrl+K**) any time you feel lost. Pick “Operator guide”
 | Switch to **Riley Park**, open Audit, then switch back to Maya | Riley can read the stream. Maya’s Command shows this desk only. |
 | Switch to **Jordan** with nothing pending | Command is a queue, not Maya’s four-click first run. |
 | Memory as Riley | Team conventions are not visible. Maya’s personal body is ciphertext until she opens it. |
+| Alex issues a grant, switch to Maya | Command still shows four-click first run. The grant is a banner: **Named grant from Alex**. |
 
 Named-metric answers stay deterministic even if you never set an API key. Optional: `XAI_API_KEY` for freeform analysis.
 
@@ -98,12 +99,12 @@ The header switcher (or **⌘K → Act as**) is not a login. It is whose desk yo
 
 ## What this version is
 
-**v10.0 — Desk-true Command / honest storage**
+**v11.0 — Desk stays put**
 
-- **Command is this desk.** Maya sees the four-click first run. Jordan sees a queue, not Maya’s onboarding. Riley’s home is Audit. Alex’s home is the grant roster.
-- **Personal memory is actually encrypted** at rest in process, and still never written to the unowned snapshot. Team memory is scoped to the caller’s team.
-- Sandbox **UPDATE/DELETE need WHERE**. A snapshot does not store sandbox SQL.
-- Fifteen operator simulations as a release input.
+- **Command’s desk home never yields.** A named handoff is a banner. Maya still sees four-click first run when a grant is waiting. Jordan’s pending hashes stay the approver desk, not a duplicate inbox card.
+- Handoff labels face the **recipient** (“Write from Maya”, “Named grant from Alex”), not the issuer.
+- Desk stats are role-true: pending hashes, this stream, named grants, this desk.
+- Sixteen operator simulations as a release input.
 
 **Not in this version**
 
@@ -135,7 +136,7 @@ migrations/     unowned control snapshot — personal memory is never stored her
 ```
 
 ```bash
-npm test         # invariants, eval hard gates, fifteen operator simulations
+npm test         # invariants, eval hard gates, sixteen operator simulations
 npm run typecheck
 ```
 

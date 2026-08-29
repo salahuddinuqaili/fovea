@@ -670,6 +670,46 @@ async function honestStorage(store: KernelStore): Promise<Omit<SimulationResult,
   };
 }
 
+async function deskStaysPut(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const insert =
+    "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'stay')";
+  const propose = await runWork(store, { principalId: "prin_maya", message: insert });
+  const jordanHandoffs = incomingHandoffs(store.state.handoffs, "prin_jordan");
+  const issued = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Grant Maya warehouse.query for investigate-metric.",
+  });
+  const mayaHandoffs = incomingHandoffs(store.state.handoffs, "prin_maya");
+  const covering = coveringGrants(store.state.grants, "prin_maya");
+  const home = (roles: string[]) =>
+    roles.includes("os_owner") || roles.includes("security_owner")
+      ? "owner"
+      : roles.includes("approver")
+        ? "approver"
+        : roles.includes("auditor")
+          ? "auditor"
+          : "analyst";
+  const steps = [
+    step("write_from_maya", jordanHandoffs.some((h) => h.label === "Write from Maya"), jordanHandoffs[0]?.label ?? "none"),
+    step("named_grant_from_alex", mayaHandoffs.some((h) => h.label === "Named grant from Alex"), mayaHandoffs.map((h) => h.label).join(",") || "none"),
+    step("covering_still_there", covering.length === 1, String(covering.length)),
+    step("handoff_and_cover", mayaHandoffs.length >= 1 && covering.length === 1, "ok"),
+    step("maya_home", home(["analyst"]) === "analyst", "analyst"),
+    step("jordan_home", home(["analyst", "approver"]) === "approver", "approver"),
+    step("not_promoted", issued.behaviors.includes("no_self_promotion") && propose.status === "needs_approval", issued.status),
+  ];
+  return {
+    id: "sim_desk_stays_put",
+    title: "Desk stays put",
+    persona: "Maya Chen → Alex Voss → Jordan Hale",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: steps.every((s) => s.passed)
+      ? []
+      : ["Handoff labels were issuer-facing, or a grant hid the covering workflow."],
+  };
+}
+
 const RUNNERS = [
   analystMorning,
   sandboxWriteLoop,
@@ -686,6 +726,7 @@ const RUNNERS = [
   controlIntegrity,
   operatorInbox,
   honestStorage,
+  deskStaysPut,
 ];
 
 export async function runOperatorSimulations(): Promise<{

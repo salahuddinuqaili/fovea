@@ -19,7 +19,8 @@ function GuidePage() {
             Fovea is a control plane, not a chatbot. Named metrics come back with a query and a provenance record.
             Vague questions are refused. Writes need an exact-hash approval. Production never runs from this demo.
             Work is this session — leave and come back, the thread is still here. Command is this desk: Jordan sees a
-            queue, Maya sees her own events.
+            queue, Maya sees four-click first run even when a grant is waiting. A named handoff is a banner, not a
+            replacement.
           </p>
         </section>
 
