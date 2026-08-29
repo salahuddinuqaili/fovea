@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("9.0.0");
+    const report = await runEvalSuite("10.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,9 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all fourteen journeys pass", async () => {
+  it("all fifteen journeys pass", async () => {
     const report = await runOperatorSimulations();
-    assert.equal(report.simulations.length, 14);
+    assert.equal(report.simulations.length, 15);
     assert.equal(
       report.passed,
       true,
@@ -469,7 +469,7 @@ describe("v8 honest control plane", () => {
   it("classifies please-grant, blocks pending execute, and keeps live off the OS allowlist", async () => {
     const { executeApprovedAction } = await import("./credentials.ts");
     const { KERNEL_VERSION } = await import("./types.ts");
-    assert.equal(KERNEL_VERSION, "9.0.0");
+    assert.equal(KERNEL_VERSION, "10.0.0");
     assert.equal(
       classifyIntent("Please grant Maya warehouse.query for investigate-metric."),
       "grant_issue",
@@ -534,5 +534,50 @@ describe("v9 this-session console", () => {
     assert.ok((slice.handoffs?.length ?? 0) >= 1);
     const restored = applyDurableSlice(store.state, slice);
     assert.ok(restored.handoffs.length >= 1);
+  });
+});
+
+describe("v10 honest storage", () => {
+  it("encrypts personal memory, scopes team memory, and requires WHERE on UPDATE", async () => {
+    const { revealMemory, canReadMemory } = await import("./memory.ts");
+    const { durableSlice } = await import("./durable.ts");
+    const store = new KernelStore();
+    const note = store.state.memory.find((m) => m.scope === "personal" && m.ownerPrincipalId === "prin_maya");
+    assert.ok(note);
+    assert.equal(note!.body.includes("maya.chen@lumen.test"), false);
+    assert.equal(revealMemory("prin_maya", note!).body.includes("maya.chen@lumen.test"), true);
+    const riley = store.principal("prin_riley")!;
+    const rileyTeam = store.state.memory.filter(
+      (m) => m.scope === "team" && canReadMemory("prin_riley", m, riley.actions.includes("memory.read.team")).ok,
+    );
+    assert.equal(rileyTeam.length, 0);
+    assert.equal(validateSandboxWriteSql("UPDATE sandbox.metric_scratch SET note = 'x'").ok, false);
+    assert.equal(
+      validateSandboxWriteSql("UPDATE sandbox.metric_scratch SET note = 'x' WHERE week_start = '2026-08-24'").ok,
+      true,
+    );
+    const insert = await runWork(store, {
+      principalId: "prin_maya",
+      message:
+        "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'v10')",
+    });
+    const { decideApproval } = await import("./orchestrator.ts");
+    decideApproval(store, {
+      approvalId: insert.approvals[0].approvalId,
+      actorId: "prin_jordan",
+      decision: "approved",
+    });
+    const upd = await runWork(store, {
+      principalId: "prin_maya",
+      message: "UPDATE sandbox.metric_scratch SET note = 'patched' WHERE week_start = '2026-08-24'",
+    });
+    decideApproval(store, {
+      approvalId: upd.approvals[0].approvalId,
+      actorId: "prin_jordan",
+      decision: "approved",
+    });
+    assert.equal(store.state.sandbox.tables["sandbox.metric_scratch"][0].note, "patched");
+    const slice = durableSlice(store.state);
+    assert.ok(slice.sandbox.writes.every((w) => w.row === null && !/insert into/i.test(w.sql)));
   });
 });

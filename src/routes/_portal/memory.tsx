@@ -27,7 +27,7 @@ function MemoryPage() {
       <PageHeader
         kicker="Knowledge"
         title="Memory"
-        description="Org and team knowledge are governed. Personal memory is encrypted and isolated. Switch to Jordan and you will not see Maya’s private notes."
+        description="Org knowledge is shared. Team memory is scoped to the team. Personal memory is encrypted at rest in this process and never written to the unowned snapshot. Switch to Jordan and you will not see Maya’s private notes."
       />
       <div className="grid gap-4 p-4 md:grid-cols-3 md:p-8">
         <Column title="Organization" items={org.data?.items ?? []} />

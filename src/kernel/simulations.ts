@@ -611,6 +611,65 @@ async function operatorInbox(store: KernelStore): Promise<Omit<SimulationResult,
   };
 }
 
+async function honestStorage(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const { canReadMemory, revealMemory } = await import("./memory.ts");
+  const { durableSlice } = await import("./durable.ts");
+  const { validateSandboxWriteSql } = await import("./sql.ts");
+  const home = (roles: string[]) =>
+    roles.includes("os_owner") || roles.includes("security_owner")
+      ? "owner"
+      : roles.includes("approver")
+        ? "approver"
+        : roles.includes("auditor")
+          ? "auditor"
+          : "analyst";
+  const insert =
+    "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'honest')";
+  const proposed = await runWork(store, { principalId: "prin_maya", message: insert });
+  decideApproval(store, {
+    approvalId: proposed.approvals[0].approvalId,
+    actorId: "prin_jordan",
+    decision: "approved",
+  });
+  const updateWork = await runWork(store, {
+    principalId: "prin_maya",
+    message: "UPDATE sandbox.metric_scratch SET note = 'patched' WHERE week_start = '2026-08-24'",
+  });
+  const updated = decideApproval(store, {
+    approvalId: updateWork.approvals[0].approvalId,
+    actorId: "prin_jordan",
+    decision: "approved",
+  });
+  const row = store.state.sandbox.tables["sandbox.metric_scratch"][0];
+  const note = store.state.memory.find((m) => m.scope === "personal" && m.ownerPrincipalId === "prin_maya");
+  const revealed = note ? revealMemory("prin_maya", note) : null;
+  const riley = store.principal("prin_riley")!;
+  const rileyTeam = store.state.memory.filter(
+    (m) => m.scope === "team" && canReadMemory("prin_riley", m, riley.actions.includes("memory.read.team")).ok,
+  );
+  const slice = durableSlice(store.state);
+  const steps = [
+    step("maya_home", home(["analyst"]) === "analyst", "analyst"),
+    step("jordan_home", home(["analyst", "approver", "team_maintainer"]) === "approver", "approver"),
+    step("riley_home", home(["auditor"]) === "auditor", "auditor"),
+    step("alex_home", home(["os_owner", "eval_owner"]) === "owner", "owner"),
+    step("update_needs_where", validateSandboxWriteSql("UPDATE sandbox.metric_scratch SET note = 'x'").ok === false, "ok"),
+    step("update_applied", updated.execution === "sandbox_executed" && String(row?.note ?? "") === "patched", String(row?.note)),
+    step("ciphertext", Boolean(note && !note.body.includes("maya.chen@lumen.test")), "ok"),
+    step("owner_reads", Boolean(revealed?.body.includes("fill-rate")), "ok"),
+    step("riley_no_team", rileyTeam.length === 0, String(rileyTeam.length)),
+    step("sql_redacted", slice.sandbox.writes.every((w) => w.row === null && !/insert into/i.test(w.sql)), "ok"),
+  ];
+  return {
+    id: "sim_honest_storage",
+    title: "Desk-true Command and honest storage",
+    persona: "Maya Chen → Jordan Hale → Riley Park",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: steps.every((s) => s.passed) ? [] : ["Memory, sandbox DML, or desk home did not stay honest."],
+  };
+}
+
 const RUNNERS = [
   analystMorning,
   sandboxWriteLoop,
@@ -626,6 +685,7 @@ const RUNNERS = [
   grantDeskVisible,
   controlIntegrity,
   operatorInbox,
+  honestStorage,
 ];
 
 export async function runOperatorSimulations(): Promise<{

@@ -86,6 +86,13 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - Denied writes are refused, not queued. Command audit is role-gated (Maya sees this desk; Riley sees the stream).
 - Fourteen operator simulations as a release input.
 
+## v10 — Desk-true Command / honest storage (this tree)
+
+- Command is desk-true: Maya’s first-run, Jordan’s queue, Riley’s audit, Alex’s grant roster.
+- Personal memory is encrypted at rest in process. Team memory is scoped to the caller’s team.
+- Sandbox UPDATE/DELETE require a single equality WHERE. Snapshot SQL is redacted.
+- Fifteen operator simulations as a release input.
+
 ## Later — Accounts and a real warehouse DSN
 
 - SSO / accounts only when the user explicitly asks for them (Auth stays OFF until then)

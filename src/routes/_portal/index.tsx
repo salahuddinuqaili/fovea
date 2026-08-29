@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { bootstrapFn, openHandoffFn, overviewFn } from "@/lib/api";
-import { FIRST_RUN, COMMAND_FEATURED, featuredPlaybooks } from "@/lib/playbooks";
+import { FIRST_RUN, COMMAND_FEATURED, featuredPlaybooks, deskHome } from "@/lib/playbooks";
 import { useFoveaSession } from "@/lib/session";
 import { formatUsd } from "@/lib/utils";
 
@@ -23,6 +23,7 @@ function CommandCenter() {
   const verified = boot.data?.verification.ok ?? data?.verification.ok ?? false;
   const principal = boot.data?.principals.find((p) => p.id === principalId);
   const books = featuredPlaybooks(principal?.roles ?? ["analyst"], COMMAND_FEATURED);
+  const home = deskHome(principal?.roles ?? ["analyst"]);
   const inbox = data?.inbox;
   const hasInbox = Boolean((inbox?.handoffs.length ?? 0) + (inbox?.pendingForDesk.length ?? 0));
   const openInbox = useMutation({
@@ -52,7 +53,15 @@ function CommandCenter() {
       <PageHeader
         kicker="Control plane"
         title="Command"
-        description="This is this desk. Handoffs land here. Writes need an exact-hash approval. Analysts cannot mint a credential. New here? Open the operator guide."
+        description={
+          home === "approver"
+            ? "This is the approver desk. Pending hashes land here. You cannot approve a write you requested."
+            : home === "auditor"
+              ? "This is the auditor desk. The stream is append-only. Maya cannot read it."
+              : home === "owner"
+                ? "This is the OS desk. Issue a named grant — never a global switch. Kill switches live on Health."
+                : "This is this desk. Handoffs land here. Writes need an exact-hash approval. Analysts cannot mint a credential."
+        }
         actions={
           <Link to="/guide" className="text-sm underline">
             Operator guide
@@ -129,9 +138,50 @@ function CommandCenter() {
             ))}
           </div>
         </section>
-      ) : null}
-
-      <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
+      ) : home === "approver" ? (
+        <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
+          <h2 className="text-sm font-medium">Nothing waiting on this desk</h2>
+          <p className="mt-2 text-sm text-muted">
+            Switch to Maya Chen and propose a sandbox write. The exact hash lands here. You cannot approve a write you
+            requested.
+          </p>
+        </section>
+      ) : home === "auditor" ? (
+        <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
+          <h2 className="text-sm font-medium">Auditor desk</h2>
+          <p className="mt-2 text-sm text-muted">
+            The append-only stream is below. Maya cannot open Audit. You do not issue grants or approve writes.
+          </p>
+          <Link to="/audit" className="mt-3 inline-block text-sm underline">
+            Open Audit
+          </Link>
+        </section>
+      ) : home === "owner" ? (
+        <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
+          <h2 className="text-sm font-medium">Named grants</h2>
+          <p className="mt-2 text-sm text-muted">
+            One person, one tool, one task, a risk ceiling. This is not a global switch.
+          </p>
+          <ul className="mt-3 space-y-2 text-sm">
+            {(boot.data?.activeGrantViews ?? []).length === 0 ? (
+              <li className="text-muted">None active. Issue one from Policy.</li>
+            ) : (
+              (boot.data?.activeGrantViews ?? []).map((g) => (
+                <li key={g.id} className="flex justify-between gap-3">
+                  <span className="truncate">
+                    {g.principalName} · {g.tool} / {g.task}
+                  </span>
+                  <span className="text-xs text-muted">{g.continuesReads ? "continues" : "named"}</span>
+                </li>
+              ))
+            )}
+          </ul>
+          <Link to="/policies" className="mt-3 inline-block text-sm underline">
+            Open Policy
+          </Link>
+        </section>
+      ) : (
+        <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
           <h2 className="text-sm font-medium">
             {(data?.tasks.length ?? 0) === 0 ? "Start here — four clicks" : "Four-click first run"}
           </h2>
@@ -150,6 +200,7 @@ function CommandCenter() {
             ))}
           </ol>
         </section>
+      )}
 
       <div className="grid gap-6 px-4 pb-10 md:grid-cols-3 md:px-8">
         <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:col-span-2">

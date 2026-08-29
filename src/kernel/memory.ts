@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { uuid } from "./crypto.ts";
+import { findPrincipal } from "./fixtures.ts";
 import type { ImprovementEvent, MemoryItem, MemoryScope } from "./types.ts";
 
 const APP_SECRET = "fovea-v1-demo-memory-key-not-for-production";
@@ -27,14 +28,35 @@ export function decryptPersonal(principalId: string, packed: string) {
   return out.toString("utf8");
 }
 
+function looksPacked(body: string) {
+  const parts = body.split(".");
+  return parts.length === 3 && parts.every((p) => p.length > 0);
+}
+
 export function makeMemory(partial: Omit<MemoryItem, "id" | "createdAt" | "updatedAt"> & { id?: string }): MemoryItem {
   const now = new Date().toISOString();
+  let body = partial.body;
+  if (partial.scope === "personal" && partial.encrypted && partial.ownerPrincipalId && !looksPacked(body)) {
+    body = encryptPersonal(partial.ownerPrincipalId, body);
+  }
   return {
     id: partial.id ?? `mem_${uuid().slice(0, 8)}`,
     createdAt: now,
     updatedAt: now,
     ...partial,
+    body,
   };
+}
+
+export function revealMemory(callerId: string, item: MemoryItem): MemoryItem {
+  if (item.scope !== "personal" || !item.encrypted) return item;
+  if (item.ownerPrincipalId !== callerId) return item;
+  if (!looksPacked(item.body)) return item;
+  try {
+    return { ...item, body: decryptPersonal(callerId, item.body) };
+  } catch {
+    return { ...item, body: "[unreadable]" };
+  }
 }
 
 const EMAIL = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
@@ -125,6 +147,11 @@ export function canReadMemory(
   if (!actionAllowed) return { ok: false, reason: "Action not in effective permission set." };
   if (item.scope === "org") return { ok: true, reason: "org" };
   if (item.scope === "team") {
+    const caller = findPrincipal(callerId);
+    if (!caller) return { ok: false, reason: "Unknown principal." };
+    if (item.teamId && caller.teamId !== item.teamId) {
+      return { ok: false, reason: "Team memory is scoped to the caller's team." };
+    }
     return { ok: true, reason: "team" };
   }
   if (item.scope === "personal") {

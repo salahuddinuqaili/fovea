@@ -1,6 +1,7 @@
 import { seedSandbox, type SandboxState } from "./sandbox.ts";
 import { emptyKill, type KernelState } from "./store.ts";
 import { normalizeHandoff } from "./handoffs.ts";
+import { sha256 } from "./crypto.ts";
 import type {
   Approval,
   AuditEvent,
@@ -57,11 +58,29 @@ export function durableSlice(state: KernelState): DurableSlice {
     releases: state.releases,
     loadedRelease: state.loadedRelease,
     loadError: state.loadError,
-    credentials: state.credentials,
-    sandbox: state.sandbox,
+    credentials: redactCredentials(state.credentials),
+    sandbox: redactSandbox(state.sandbox),
     grants: state.grants ?? [],
     handoffs: state.handoffs ?? [],
   };
+}
+
+function redactSandbox(sandbox: SandboxState): SandboxState {
+  return {
+    tables: sandbox.tables,
+    writes: (sandbox.writes ?? []).map((w) => ({
+      ...w,
+      sql: w.sql ? `sha256:${sha256(w.sql).slice(0, 16)}` : "",
+      row: null,
+    })),
+  };
+}
+
+function redactCredentials(list: WriteCredential[]): WriteCredential[] {
+  return (list ?? []).map((c) => ({
+    ...c,
+    allowedResources: c.allowedResources.map((r) => (r.startsWith("sandbox.") ? r : "sandbox.*")),
+  }));
 }
 
 /**

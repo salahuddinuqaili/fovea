@@ -181,3 +181,12 @@ export function featuredPlaybooks(roles: string[], ids: readonly string[]) {
   const books = playbooksFor(roles);
   return ids.map((id) => books.find((b) => b.id === id)).filter((b): b is Playbook => Boolean(b));
 }
+
+export type DeskHome = "analyst" | "approver" | "auditor" | "owner";
+
+export function deskHome(roles: string[]): DeskHome {
+  if (roles.includes("os_owner") || roles.includes("security_owner")) return "owner";
+  if (roles.includes("approver")) return "approver";
+  if (roles.includes("auditor")) return "auditor";
+  return "analyst";
+}

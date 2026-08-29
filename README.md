@@ -48,6 +48,8 @@ Press **⌘K** (or **Ctrl+K**) any time you feel lost. Pick “Operator guide”
 | A denied write (writes killed, or policy deny) | **Refused.** No approval is queued. |
 | Leave Work and come back this session | The thread is still there. `?q=` is consumed once. |
 | Switch to **Riley Park**, open Audit, then switch back to Maya | Riley can read the stream. Maya’s Command shows this desk only. |
+| Switch to **Jordan** with nothing pending | Command is a queue, not Maya’s four-click first run. |
+| Memory as Riley | Team conventions are not visible. Maya’s personal body is ciphertext until she opens it. |
 
 Named-metric answers stay deterministic even if you never set an API key. Optional: `XAI_API_KEY` for freeform analysis.
 
@@ -96,13 +98,12 @@ The header switcher (or **⌘K → Act as**) is not a login. It is whose desk yo
 
 ## What this version is
 
-**v9.0 — This-session console / named desks**
+**v10.0 — Desk-true Command / honest storage**
 
-- Work **stays this session**. Leave for Approvals and come back — the INSERT is still on the thread. Auto-run `?q=` is consumed once.
-- **Named desks.** Maya’s write hands off to Jordan’s Command inbox. Alex’s grant hands off to Maya. Handoffs expire in eight hours.
-- **Separation of duties.** Only an approver who is not the requester can decide. OS owners are not hidden super-approvers.
-- Denied writes are **refused, not queued**. Maya’s Command audit is her desk. Riley’s is the stream.
-- Fourteen operator simulations as a release input.
+- **Command is this desk.** Maya sees the four-click first run. Jordan sees a queue, not Maya’s onboarding. Riley’s home is Audit. Alex’s home is the grant roster.
+- **Personal memory is actually encrypted** at rest in process, and still never written to the unowned snapshot. Team memory is scoped to the caller’s team.
+- Sandbox **UPDATE/DELETE need WHERE**. A snapshot does not store sandbox SQL.
+- Fifteen operator simulations as a release input.
 
 **Not in this version**
 
@@ -134,7 +135,7 @@ migrations/     unowned control snapshot — personal memory is never stored her
 ```
 
 ```bash
-npm test         # invariants, eval hard gates, fourteen operator simulations
+npm test         # invariants, eval hard gates, fifteen operator simulations
 npm run typecheck
 ```
 

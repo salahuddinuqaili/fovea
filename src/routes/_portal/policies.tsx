@@ -11,7 +11,7 @@ import type { AutonomyGrant } from "@/kernel/types";
 
 export const Route = createFileRoute("/_portal/policies")({ component: PoliciesPage });
 
-const BUNDLE = `policy_version: 1.7.0
+const BUNDLE = `policy_version: 1.8.0
 autonomy:
   default_stage: B
   global_switch: false
@@ -35,6 +35,16 @@ desks:
   denied_write: no_queue
   sod: approver_only
   self_approve: deny
+memory:
+  personal:
+    encrypted_at_rest: true
+    durable_snapshot: omit
+    cross_user: deny
+  team:
+    scoped_to_caller_team: true
+snapshot:
+  sandbox_sql: redact
+  credentials: metadata_only
 control_plane:
   snapshot_align: kernel_wins
   pending_execute: deny

@@ -58,7 +58,7 @@ function GuidePage() {
             <li>“Enable autonomous mode” — there is no global switch. Grants are per-tool, per-task, per-risk.</li>
             <li>Maya cannot issue a grant. Switch to Alex Voss or Sam Okonkwo. Duplicates are refused. Revoke ends coverage. After a grant, Work shows it on Maya’s desk before she asks. Alex’s Command lists the same grant. Sibling reads continue. The next action opens Maya’s desk — it does not run as Alex. The grant never promotes Stage D.</li>
             <li>“Connect the live warehouse” — registered, not on Maya’s allowlist. Fixture stays the read path.</li>
-            <li>Another person’s personal notes are never readable.</li>
+            <li>Another person’s personal notes are never readable. Team memory stays on the team. Personal bodies are encrypted at rest in this process.</li>
             <li>Session budget exhausted — close the session or stop spending.</li>
           </ul>
         </section>

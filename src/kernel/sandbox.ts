@@ -99,6 +99,25 @@ function splitArgs(s: string): string[] {
   return out;
 }
 
+function parseWhere(sql: string): { col: string; value: Scalar } | null {
+  const m = sql.match(/\bwhere\s+([a-z_][\w]*)\s*=\s*('[^']*'|"[^"]*"|-?\d+(?:\.\d+)?|true|false|null)\s*$/i);
+  if (!m) return null;
+  return { col: m[1].toLowerCase(), value: unquote(m[2]) };
+}
+
+function parseSet(sql: string): Record<string, Scalar> | null {
+  const m = sql.match(/\bset\s+(.+?)\s+where\b/i);
+  if (!m) return null;
+  const parts = splitArgs(m[1]);
+  const out: Record<string, Scalar> = {};
+  for (const p of parts) {
+    const kv = p.match(/^([a-z_][\w]*)\s*=\s*(.+)$/i);
+    if (!kv) return null;
+    out[kv[1].toLowerCase()] = unquote(kv[2]);
+  }
+  return out;
+}
+
 function applyDml(state: SandboxState, sql: string, table: string, verb: string): { rowsAffected: number; row: SandboxRow | null } {
   if (!state.tables[table]) state.tables[table] = [];
   if (verb === "insert") {
@@ -107,17 +126,28 @@ function applyDml(state: SandboxState, sql: string, table: string, verb: string)
     return { rowsAffected: 1, row };
   }
   if (verb === "delete") {
-    const before = state.tables[table].length;
-    state.tables[table] = [];
-    return { rowsAffected: before, row: null };
+    const where = parseWhere(sql);
+    if (!where) return { rowsAffected: 0, row: null };
+    const before = state.tables[table];
+    const kept = before.filter((r) => r[where.col] !== where.value);
+    state.tables[table] = kept;
+    return { rowsAffected: before.length - kept.length, row: null };
   }
   if (verb === "update") {
-    const n = state.tables[table].length;
-    return { rowsAffected: n, row: state.tables[table][0] ?? null };
+    const where = parseWhere(sql);
+    const set = parseSet(sql);
+    if (!where || !set) return { rowsAffected: 0, row: null };
+    let n = 0;
+    let last: SandboxRow | null = null;
+    state.tables[table] = state.tables[table].map((r) => {
+      if (r[where.col] !== where.value) return r;
+      n += 1;
+      last = { ...r, ...set };
+      return last;
+    });
+    return { rowsAffected: n, row: last };
   }
-  const row = { _raw: sql, written_at: new Date().toISOString() };
-  state.tables[table].push(row);
-  return { rowsAffected: 1, row };
+  return { rowsAffected: 0, row: null };
 }
 
 export function executeSandboxWrite(

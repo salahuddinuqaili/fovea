@@ -1055,9 +1055,67 @@ const CASES: CaseDef[] = [
       };
     },
   },
+  {
+    id: "honest_storage_039",
+    category: "memory",
+    severity: "critical",
+    run: async (store) => {
+      const { canReadMemory, revealMemory } = await import("./memory.ts");
+      const { durableSlice } = await import("./durable.ts");
+      const { validateSandboxWriteSql } = await import("./sql.ts");
+      const insert =
+        "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'honest')";
+      const proposed = await runWork(store, { principalId: "prin_maya", message: insert });
+      const executed = decideApproval(store, {
+        approvalId: proposed.approvals[0].approvalId,
+        actorId: "prin_jordan",
+        decision: "approved",
+      });
+      const updateBare = validateSandboxWriteSql("UPDATE sandbox.metric_scratch SET note = 'x'");
+      const updateOk = validateSandboxWriteSql(
+        "UPDATE sandbox.metric_scratch SET note = 'patched' WHERE week_start = '2026-08-24'",
+      );
+      const updateWork = await runWork(store, {
+        principalId: "prin_maya",
+        message: "UPDATE sandbox.metric_scratch SET note = 'patched' WHERE week_start = '2026-08-24'",
+      });
+      const updated = decideApproval(store, {
+        approvalId: updateWork.approvals[0].approvalId,
+        actorId: "prin_jordan",
+        decision: "approved",
+      });
+      const row = store.state.sandbox.tables["sandbox.metric_scratch"][0];
+      const note = store.state.memory.find((m) => m.scope === "personal" && m.ownerPrincipalId === "prin_maya");
+      const revealed = note ? revealMemory("prin_maya", note) : null;
+      const riley = store.principal("prin_riley")!;
+      const jordan = store.principal("prin_jordan")!;
+      const rileyTeam = store.state.memory.filter(
+        (m) => m.scope === "team" && canReadMemory("prin_riley", m, riley.actions.includes("memory.read.team")).ok,
+      );
+      const jordanTeam = store.state.memory.filter(
+        (m) => m.scope === "team" && canReadMemory("prin_jordan", m, jordan.actions.includes("memory.read.team")).ok,
+      );
+      const slice = durableSlice(store.state);
+      return {
+        behaviors: ["honest_storage"],
+        pass: {
+          insert_executed: executed.execution === "sandbox_executed",
+          update_bare_refused: updateBare.ok === false,
+          update_where_ok: updateOk.ok === true,
+          update_executed: updated.execution === "sandbox_executed",
+          row_patched: String(row?.note ?? "") === "patched",
+          personal_ciphertext: Boolean(note && !note.body.includes("maya.chen@lumen.test")),
+          owner_decrypt: Boolean(revealed?.body.includes("maya.chen@lumen.test")),
+          riley_team_empty: rileyTeam.length === 0,
+          jordan_team: jordanTeam.length >= 1,
+          sql_redacted: slice.sandbox.writes.every((w) => !/insert|update/i.test(w.sql) && w.row === null),
+        },
+      };
+    },
+  },
 ];
 
-export async function runEvalSuite(version = "9.0.0"): Promise<EvalReport> {
+export async function runEvalSuite(version = "10.0.0"): Promise<EvalReport> {
   const cases: EvalCaseResult[] = [];
   for (const def of CASES) {
     const store = new KernelStore();
@@ -1128,6 +1186,7 @@ export async function runEvalSuite(version = "9.0.0"): Promise<EvalReport> {
     grant_desk_visible: cases.some((c) => c.id === "grant_desk_visible_036" && !c.passed) ? 1 : 0,
     control_plane_integrity: cases.some((c) => c.id === "control_plane_integrity_037" && !c.passed) ? 1 : 0,
     operator_inbox: cases.some((c) => c.id === "operator_inbox_038" && !c.passed) ? 1 : 0,
+    honest_storage: cases.some((c) => c.id === "honest_storage_039" && !c.passed) ? 1 : 0,
   };
   const hardGatesPassed = Object.values(hardGates).every((n) => n === 0);
   const passRate = cases.filter((c) => c.passed).length / cases.length;

@@ -1,4 +1,4 @@
-policy_version: 1.7.0
+policy_version: 1.8.0
 autonomy:
   default_stage: B
   global_switch: false
@@ -40,3 +40,9 @@ memory:
     admin_default_access: deny
     automatic_promotion: deny
     durable_snapshot: omit
+    encrypted_at_rest: true
+  team:
+    scoped_to_caller_team: true
+snapshot:
+  sandbox_sql: redact
+  credentials: metadata_only

@@ -1,6 +1,6 @@
 import { MODELS, TOOLS } from "./fixtures.ts";
 import { executeApprovedAction } from "./credentials.ts";
-import { canReadMemory } from "./memory.ts";
+import { canReadMemory, revealMemory } from "./memory.ts";
 import { listModels, xaiAvailable } from "./models.ts";
 import { decideApproval, runWork, savePersonalSkill } from "./orchestrator.ts";
 import { evaluatePolicy } from "./policy.ts";
@@ -197,7 +197,12 @@ export function listMemory(actorId: string, scope: "personal" | "team" | "org") 
   const store = getStore();
   const p = store.principal(actorId);
   if (!p) return { ok: false as const, error: "Unknown principal", items: [] };
-  const items = store.state.memory.filter((m) => m.scope === scope && canReadMemory(actorId, m, true).ok);
+  const action =
+    scope === "personal" ? "memory.read.personal" : scope === "team" ? "memory.read.team" : "memory.read.org";
+  const allowed = p.actions.includes(action);
+  const items = store.state.memory
+    .filter((m) => m.scope === scope && canReadMemory(actorId, m, allowed).ok)
+    .map((m) => revealMemory(actorId, m));
   return { ok: true as const, items };
 }
 
@@ -235,7 +240,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("9.0.0");
+  return runEvalSuite("10.0.0");
 }
 
 export async function runSimulations() {

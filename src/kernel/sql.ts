@@ -8,7 +8,7 @@ const WRITE_KEYWORDS =
   /\b(insert|update|delete|merge|drop|truncate|alter|grant|revoke|copy|create|replace|call|execute|do)\b/i;
 
 const ALLOWED_SCHEMAS = new Set(["analytics", "sandbox", "finance"]);
-const SANDBOX_WRITE_VERBS = /^(insert|update|delete|merge)$/i;
+const SANDBOX_WRITE_VERBS = /^(insert|update|delete)$/i;
 const DENY_OBJECTS = [
   /\bpg_catalog\b/i,
   /\binformation_schema\b/i,
@@ -149,10 +149,26 @@ export function validateSandboxWriteSql(sql: string): SandboxWriteValidation {
   }
   const verbMatch = normalized.match(/^\s*(insert|update|delete|merge)\b/i);
   if (!verbMatch || !SANDBOX_WRITE_VERBS.test(verbMatch[1])) {
-    return { ...empty, notes: ["Sandbox writes must be INSERT, UPDATE, DELETE, or MERGE."] };
+    return { ...empty, notes: ["Sandbox writes must be INSERT, UPDATE, or DELETE. MERGE is not implemented."] };
   }
   if (/\binto\s+outfile|\bselect\s+[\s\S]*\binto\b/i.test(normalized) && !/^\s*insert\b/i.test(normalized)) {
     return { ...empty, notes: ["SELECT INTO is blocked."] };
+  }
+  const verb = verbMatch[1].toLowerCase();
+  if (verb === "update" || verb === "delete") {
+    if (!/\bwhere\b/i.test(normalized)) {
+      return { ...empty, notes: ["UPDATE/DELETE without WHERE is refused. Name the rows."] };
+    }
+    const whereClause = normalized.split(/\bwhere\b/i)[1] ?? "";
+    if (/\b(or|in\s*\(|like|between|exists|not\s+in)\b/i.test(whereClause)) {
+      return { ...empty, notes: ["Sandbox UPDATE/DELETE WHERE must be a single column equality."] };
+    }
+    if (!/^\s*[a-z_][\w]*\s*=\s*(?:'[^']*'|"[^"]*"|-?\d+(?:\.\d+)?|true|false|null)\s*$/i.test(whereClause.trim())) {
+      return { ...empty, notes: ["Sandbox UPDATE/DELETE WHERE must be `column = value`."] };
+    }
+  }
+  if (verb === "update" && !/\bset\b/i.test(normalized)) {
+    return { ...empty, notes: ["UPDATE requires SET."] };
   }
   const tables = tablesInSql(normalized);
   const catalog = catalogViolations(normalized, tables);
