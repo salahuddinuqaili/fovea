@@ -10,10 +10,10 @@
     />
     <meta name="theme-color" content="#09090B" />
     <link rel="canonical" href="https://salahuddinuqaili.github.io/fovea/" />
-    <meta property="og:title" content="Fovea" />
+    <meta property="og:title" content="Fovea — control plane for enterprise analytics agents" />
     <meta
       property="og:description"
-      content="The control plane between analysts, models, and the warehouse."
+      content="Named metrics return SQL and provenance. Writes are hash-bound. Production stays gated."
     />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://salahuddinuqaili.github.io/fovea/" />
@@ -73,15 +73,15 @@
       }
       .top-inner {
         display: flex; align-items: center; justify-content: space-between;
-        gap: 16px; min-height: 64px;
+        gap: 12px; min-height: 64px;
       }
-      .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+      .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; flex-shrink: 0; }
       .brand span { font-family: var(--display); font-size: 26px; line-height: 1; }
       nav { display: flex; align-items: center; gap: 2px; font-size: 13px; color: var(--muted); }
       nav a {
         text-decoration: none; min-height: 44px;
         display: inline-flex; align-items: center; padding: 0 10px;
-        border-radius: var(--radius-sm);
+        border-radius: var(--radius-sm); white-space: nowrap;
       }
       nav a:hover { color: var(--fg); }
       .btn {
@@ -95,35 +95,24 @@
         border: 1px solid var(--border);
       }
       .btn:hover { filter: brightness(1.06); }
-      .hero { padding: 64px 0 8px; }
+      .hero { padding: 48px 0 8px; }
       .kicker {
         font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
         color: var(--subtle); margin: 0;
       }
       h1 {
         font-family: var(--display);
-        font-size: clamp(36px, 6.4vw, 64px);
-        line-height: 1.04; letter-spacing: -0.02em;
-        margin: 16px 0 0; max-width: 18ch;
+        font-size: clamp(32px, 5.6vw, 56px);
+        line-height: 1.08; letter-spacing: -0.02em;
+        margin: 14px 0 0; max-width: 22ch;
       }
       .lede {
-        max-width: 58ch; color: var(--muted); font-size: 18px;
-        line-height: 1.6; margin-top: 20px;
+        max-width: 54ch; color: var(--muted); font-size: 18px;
+        line-height: 1.55; margin-top: 18px;
       }
-      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; }
-      .route {
-        display: flex; flex-wrap: wrap; gap: 4px 4px;
-        margin: 16px 0 0; padding: 0; list-style: none;
-        font-size: 13px; color: var(--muted);
-      }
-      .route a {
-        text-decoration: none; min-height: 44px;
-        display: inline-flex; align-items: center; padding: 0 12px 0 0;
-      }
-      .route a:hover { color: var(--fg); }
-      .route a span { color: var(--subtle); margin-right: 6px; font-family: var(--mono); font-size: 11px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
       .shot {
-        margin: 40px 0 0;
+        margin: 36px 0 0;
         border: 1px solid var(--border);
         border-radius: var(--radius);
         overflow: hidden;
@@ -134,7 +123,7 @@
         font-size: 13px; color: var(--muted);
         border-top: 1px solid var(--border);
       }
-      .grid3 { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-top: 40px; }
+      .grid3 { display: grid; gap: 12px; grid-template-columns: repeat(3, 1fr); margin-top: 36px; }
       .card {
         background: var(--surface); border: 1px solid var(--border);
         border-radius: var(--radius); padding: 20px;
@@ -143,40 +132,11 @@
         font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
         color: var(--subtle); margin: 0;
       }
-      .card h3 { font-family: var(--display); font-size: 28px; margin: 8px 0 0; }
+      .card h3 { font-family: var(--display); font-size: 26px; margin: 8px 0 0; }
       .card p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 10px 0 0; }
-      section { padding: 64px 0; border-top: 1px solid var(--border); scroll-margin-top: 80px; }
+      section { padding: 56px 0; border-top: 1px solid var(--border); scroll-margin-top: 80px; }
       h2 { font-family: var(--display); font-size: clamp(28px, 4vw, 40px); margin: 0 0 8px; }
       .section-lede { color: var(--muted); font-size: 16px; max-width: 58ch; margin: 0 0 28px; }
-      .roles {
-        display: grid; gap: 10px;
-        grid-template-columns: 1fr;
-      }
-      @media (min-width: 700px) {
-        .roles { grid-template-columns: repeat(2, 1fr); }
-      }
-      @media (min-width: 960px) {
-        .roles { grid-template-columns: repeat(6, 1fr); }
-        .role { grid-column: span 2; }
-        .roles .role:nth-child(4),
-        .roles .role:nth-child(5) { grid-column: span 3; }
-      }
-      .role {
-        background: var(--surface); border: 1px solid var(--border);
-        border-radius: var(--radius); padding: 18px 20px;
-      }
-      .role .who {
-        font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-        color: var(--subtle); margin: 0;
-      }
-      .role h3 { font-family: var(--display); font-size: 26px; margin: 6px 0 12px; }
-      .role dl { margin: 0; }
-      .role dt {
-        font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-        color: var(--subtle); margin-top: 10px;
-      }
-      .role dt:first-child { margin-top: 0; }
-      .role dd { margin: 4px 0 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
       .steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
       .steps li {
         display: grid; grid-template-columns: 40px 1fr; gap: 16px; align-items: start;
@@ -197,8 +157,14 @@
         color: var(--subtle); font-weight: 500; padding: 10px 16px 10px 0;
         border-bottom: 1px solid var(--border);
       }
-      td { padding: 14px 16px 14px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
-      td:first-child { font-weight: 500; }
+      td { padding: 16px 20px 16px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+      td:last-child { padding-right: 0; }
+      .desks td:first-child { width: 22%; }
+      .desk-name { display: block; font-weight: 500; color: var(--fg); }
+      .demo {
+        display: block; font-size: 12px; font-weight: 400;
+        color: var(--subtle); margin-top: 2px;
+      }
       .muted { color: var(--muted); }
       .stops { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
       .stops li {
@@ -212,11 +178,11 @@
         background: var(--surface-2); border: 1px solid var(--border);
         border-radius: var(--radius); padding: 20px 88px 20px 18px;
         overflow: auto; font-family: var(--mono); font-size: 13px;
-        line-height: 1.65; color: var(--fg); margin: 0 0 28px;
+        line-height: 1.65; color: var(--fg); margin: 0;
       }
       .copy {
         position: absolute; top: 12px; right: 12px;
-        min-height: 36px; padding: 0 12px;
+        min-height: 44px; padding: 0 12px;
         border-radius: var(--radius-sm); border: 1px solid var(--border);
         background: var(--surface); color: var(--fg); font-size: 12px;
       }
@@ -236,31 +202,35 @@
       footer a:hover { color: var(--fg); }
       @media (max-width: 800px) {
         .grid3 { grid-template-columns: 1fr; }
-        h1 { font-size: 36px; }
-        .hero { padding-top: 36px; }
+        h1 { font-size: 32px; max-width: none; }
+        .hero { padding-top: 28px; }
         .nav-wide { display: none; }
         nav a { padding: 0 8px; }
         pre { padding-right: 18px; padding-top: 52px; }
-        .expect thead { display: none; }
-        .expect tr {
+        .desks thead { display: none; }
+        .desks tr {
           display: block;
           background: var(--surface);
           border: 1px solid var(--border);
           border-radius: var(--radius);
-          padding: 14px 16px;
+          padding: 16px 18px;
           margin-bottom: 8px;
         }
-        .expect td {
-          display: block; border: 0; padding: 0;
+        .desks td {
+          display: block; border: 0; padding: 0; width: auto;
         }
-        .expect td:first-child { padding-bottom: 6px; }
-        .expect td.muted::before {
-          content: "Expect — ";
-          color: var(--subtle);
+        .desks td + td { margin-top: 10px; }
+        .desks td.can::before,
+        .desks td.cannot::before {
+          display: block;
           font-size: 11px;
-          letter-spacing: 0.12em;
+          letter-spacing: 0.14em;
           text-transform: uppercase;
+          color: var(--subtle);
+          margin-bottom: 4px;
         }
+        .desks td.can::before { content: "Can"; }
+        .desks td.cannot::before { content: "Cannot"; }
       }
       @media (prefers-reduced-motion: reduce) {
         html { scroll-behavior: auto; }
@@ -280,9 +250,9 @@
           <span>Fovea</span>
         </a>
         <nav aria-label="Primary">
-          <a href="#roles">Roles</a>
-          <a class="nav-wide" href="#hour">First hour</a>
-          <a class="nav-wide" href="#guardrails">Guardrails</a>
+          <a href="#works">How it works</a>
+          <a class="nav-wide" href="#roles">Who decides</a>
+          <a class="nav-wide" href="#stops">Hard stops</a>
           <a href="https://github.com/salahuddinuqaili/fovea">Source</a>
           <a class="btn" href="#run">Run it</a>
         </nav>
@@ -291,31 +261,26 @@
 
     <main id="main" class="wrap">
       <div class="hero">
-        <p class="kicker">Apache-2.0 · v12 · TypeScript</p>
+        <p class="kicker">For analytics, security, and audit</p>
         <h1>The control plane between analysts, models, and the warehouse.</h1>
         <p class="lede">
-          For analytics, security, and audit. Named metrics come back with SQL and provenance.
-          Vague names abstain. Writes need an exact-hash approval. Production does not run from a prompt.
-          There is no admin who can do everything, and no global autonomous switch.
+          Ask a named metric. Get the number, the SQL, and provenance — or a refusal.
+          A write waits for someone else to sign the exact hash. Production does not run from a prompt.
         </p>
         <div class="actions">
           <a class="btn" href="#run">Run it locally</a>
           <a class="btn ghost" href="https://github.com/salahuddinuqaili/fovea">View the source</a>
         </div>
-        <ul class="route">
-          <li><a href="#hour"><span>Analytics</span>First hour</a></li>
-          <li><a href="#guardrails"><span>Security</span>Hard stops</a></li>
-          <li><a href="#roles"><span>Every desk</span>Who can do what</a></li>
-        </ul>
         <figure class="shot">
           <img
             src="desk.png"
             width="1280"
             height="720"
-            alt="Analyst desk after asking for north-star revenue last week: $1,510,880, SQL, and provenance."
+            alt="Analyst Work console after asking for north-star revenue last week: $1,510,880, down 18.2%, with SQL and provenance in Evidence."
+            fetchpriority="high"
           />
           <figcaption>
-            The analyst desk. A named metric returns the number, the SQL, and provenance — not a guessed definition.
+            The analyst Work console. North-star revenue last week: $1,510,880 (−18.2%), with the SQL and provenance in Evidence — not a guessed definition.
           </figcaption>
         </figure>
         <div class="grid3">
@@ -326,82 +291,22 @@
           </article>
           <article class="card">
             <p class="k">Writes</p>
-            <h3>Hash-bound</h3>
+            <h3>Someone else signs</h3>
             <p>An approver who is not the requester decides an exact action hash. A short-lived credential may run in sandbox. Production stays gated.</p>
           </article>
           <article class="card">
             <p class="k">Policy</p>
-            <h3>Intersection</h3>
-            <p>Permissions never union across roles. Tool output, tickets, and READMEs are data — not policy. A grant is one person, one tool, one task.</p>
+            <h3>No one does everything</h3>
+            <p>Permissions never union across desks. Tool output, tickets, and READMEs are data — not policy. A grant is one person, one tool, one task.</p>
           </article>
         </div>
       </div>
 
-      <section id="roles">
-        <h2>Who can do what</h2>
+      <section id="works">
+        <h2>How it works</h2>
         <p class="section-lede">
-          The header is a desk, not a login. There is no SSO in this tree.
-          Permissions intersect. They never union.
-        </p>
-        <div class="roles">
-          <article class="role">
-            <p class="who">Analyst · Maya Chen</p>
-            <h3>Ask and propose</h3>
-            <dl>
-              <dt>Can</dt>
-              <dd>Ask named metrics, investigate dips, propose sandbox writes, plan backfills.</dd>
-              <dt>Cannot</dt>
-              <dd>Approve a write, issue a grant, or read the org audit stream.</dd>
-            </dl>
-          </article>
-          <article class="role">
-            <p class="who">Approver · Jordan Hale</p>
-            <h3>Decide the hash</h3>
-            <dl>
-              <dt>Can</dt>
-              <dd>Decide the exact action hash and mint a short-lived sandbox credential.</dd>
-              <dt>Cannot</dt>
-              <dd>Approve a write they requested.</dd>
-            </dl>
-          </article>
-          <article class="role">
-            <p class="who">Security · Sam Okonkwo</p>
-            <h3>Kill and grant</h3>
-            <dl>
-              <dt>Can</dt>
-              <dd>Flip kill switches. Issue or revoke named grants.</dd>
-              <dt>Cannot</dt>
-              <dd>Act as a hidden super-approver.</dd>
-            </dl>
-          </article>
-          <article class="role">
-            <p class="who">Auditor · Riley Park</p>
-            <h3>Read the stream</h3>
-            <dl>
-              <dt>Can</dt>
-              <dd>Read the append-only audit stream.</dd>
-              <dt>Cannot</dt>
-              <dd>Issue grants or decide writes.</dd>
-            </dl>
-          </article>
-          <article class="role">
-            <p class="who">OS owner · Alex Voss</p>
-            <h3>Release and revoke</h3>
-            <dl>
-              <dt>Can</dt>
-              <dd>Issue and revoke grants. Run evals and signed releases.</dd>
-              <dt>Cannot</dt>
-              <dd>Approve the analyst’s write.</dd>
-            </dl>
-          </article>
-        </div>
-      </section>
-
-      <section id="hour">
-        <h2>The first hour</h2>
-        <p class="section-lede">
-          Sit as the analyst. If these four things happen, the control plane is working.
-          The in-app Guide has the rest of the operator walkthrough.
+          Ten minutes on the analyst desk. If these four things happen, the control plane is working.
+          The in-app Guide has the rest.
         </p>
         <ol class="steps">
           <li>
@@ -431,15 +336,75 @@
         </ol>
       </section>
 
-      <section id="guardrails">
+      <section id="roles">
+        <h2>Who decides</h2>
+        <p class="section-lede">
+          Each desk is a job, not a login. Permissions intersect — they never union.
+          There is no admin who can do everything.
+        </p>
+        <table class="desks">
+          <thead>
+            <tr>
+              <th>Desk</th>
+              <th>Can</th>
+              <th>Cannot</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                <span class="desk-name">Analyst</span>
+                <span class="demo">Maya Chen in the demo</span>
+              </td>
+              <td class="can">Ask named metrics, investigate dips, propose sandbox writes, plan backfills.</td>
+              <td class="cannot muted">Approve a write, issue a grant, or read the org audit.</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="desk-name">Approver</span>
+                <span class="demo">Jordan Hale in the demo</span>
+              </td>
+              <td class="can">Decide the exact action hash. Mint a short-lived sandbox credential.</td>
+              <td class="cannot muted">Approve a write they requested.</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="desk-name">Security</span>
+                <span class="demo">Sam Okonkwo in the demo</span>
+              </td>
+              <td class="can">Flip kill switches. Issue or revoke named grants.</td>
+              <td class="cannot muted">Act as a hidden super-approver.</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="desk-name">Auditor</span>
+                <span class="demo">Riley Park in the demo</span>
+              </td>
+              <td class="can">Read the append-only audit stream.</td>
+              <td class="cannot muted">Issue grants or decide writes.</td>
+            </tr>
+            <tr>
+              <td>
+                <span class="desk-name">OS owner</span>
+                <span class="demo">Alex Voss in the demo</span>
+              </td>
+              <td class="can">Issue and revoke grants. Run evals and signed releases.</td>
+              <td class="cannot muted">Approve the analyst’s write.</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note">The header switches desks. There is no SSO in this tree.</p>
+      </section>
+
+      <section id="stops">
         <h2>Hard stops</h2>
         <p class="section-lede">Product rules, not UI copy. A confident wrong number is a failure. A refusal is not.</p>
         <ul class="stops">
-          <li>Ambiguous metrics abstain. Named canonical metrics only.</li>
+          <li>If the metric name is ambiguous, Fovea abstains. Named canonical metrics only.</li>
           <li>Production writes and backfill execution stay disabled.</li>
-          <li>Approvals bind an exact action hash. The requester cannot self-approve.</li>
+          <li>The person who requested a write cannot approve it. Approval binds one exact hash.</li>
           <li>Unsigned or tampered releases cannot load. There is no skip-signature path.</li>
-          <li>Personal memory is isolated and never written to the unowned snapshot.</li>
+          <li>Personal memory is isolated and never written to the shared snapshot.</li>
           <li>There is no global autonomous switch — not in this version, not later.</li>
         </ul>
         <p class="note">Not in this tree: SSO, a live warehouse DSN, production execution, arbitrary plugins.</p>
@@ -452,53 +417,27 @@
           <button class="copy" type="button" aria-label="Copy install commands" data-copy="git clone https://github.com/salahuddinuqaili/fovea
 cd fovea
 npm install
-npm test
 npm run dev">Copy</button>
           <pre id="install">git clone https://github.com/salahuddinuqaili/fovea
 cd fovea
 npm install
-npm test
 npm run dev</pre>
         </div>
-        <table class="expect">
-          <thead>
-            <tr>
-              <th>You type</th>
-              <th>You should see</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>What was north-star revenue last week?</td>
-              <td class="muted">A supported number, the SQL, and provenance.</td>
-            </tr>
-            <tr>
-              <td>How is revenue doing?</td>
-              <td class="muted">Abstention. “Revenue” maps to more than one definition.</td>
-            </tr>
-            <tr>
-              <td>Enable autonomous mode for everyone.</td>
-              <td class="muted">Refused. There is no global switch.</td>
-            </tr>
-            <tr>
-              <td>A sandbox INSERT, then switch to the approver.</td>
-              <td class="muted">Needs approval. The hash is decided. The analyst’s thread follows the write.</td>
-            </tr>
-          </tbody>
-        </table>
         <p class="note">
           Critical eval failures block a release. You cannot average them away.
-          See
-          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/SECURITY.md">Security</a>,
-          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/ROADMAP.md">Roadmap</a>, and
+          Tests live in
           <a href="https://github.com/salahuddinuqaili/fovea/blob/main/CONTRIBUTING.md">Contributing</a>.
+          Also
+          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/SECURITY.md">Security</a>
+          and
+          <a href="https://github.com/salahuddinuqaili/fovea/blob/main/ROADMAP.md">Roadmap</a>.
         </p>
       </section>
     </main>
 
     <footer>
       <div class="wrap foot">
-        <div>Fovea · Apache License 2.0 · Accuracy at the center.</div>
+        <div>Fovea · v12 · Apache License 2.0 · Accuracy at the center.</div>
         <div class="foot-links">
           <a href="https://github.com/salahuddinuqaili/fovea/blob/main/SECURITY.md">Security</a>
           <a href="https://github.com/salahuddinuqaili/fovea/blob/main/ROADMAP.md">Roadmap</a>
