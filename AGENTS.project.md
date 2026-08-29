@@ -2,7 +2,7 @@
 
 This is an **open-source Agentic OS** (name: **Fovea**). Continue in place. Do not scaffold a new app.
 
-## Current version: v5.0.0 — Grant lifecycle (prod exec still off, Auth still OFF)
+## Current version: v6.0.0 — Selected workflow continuation (prod exec still off, Auth still OFF)
 
 Locked defaults:
 
@@ -12,11 +12,11 @@ Locked defaults:
 - Principals remain Stage B. Writes require exact-hash approval.
 - Stage C path: sandbox.* writes after approval + short-lived credential. Production execution disabled.
 - Stage D is selected workflows only: per-tool, per-task, per-risk grants. No global autonomous switch.
-- Alex (OS owner) or Sam (security) can issue and revoke a named grant from Policy or Work. Maya cannot. Wildcards, writes, duplicates, and T4 are denied. A grant never self-promotes. Active grants cover the matching read workflow until expiry or revoke.
+- Alex (OS owner) or Sam (security) can issue and revoke a named grant from Policy or Work. Maya cannot. Wildcards, writes, duplicates, and T4 are denied. A grant never self-promotes. An active `warehouse.query` / `investigate-metric` / `read` grant continues Maya’s next named metric with sibling canonical reads in the same task. Without a grant, a metric is one query. Grants do not chain across tasks and never execute writes.
 - Live warehouse adapter is registered and policy-gated. No DSN in the demo. Writes stay disabled.
 - Releases sign and verify through the demo KMS. `--skip-signature-check` does not exist.
 - Skills: investigate-metric, investigate-incident, write-and-validate-sql, plan-backfill, session-close
-- Operator simulations in `src/kernel/simulations.ts` are a release input (ten journeys).
+- Operator simulations in `src/kernel/simulations.ts` are a release input (eleven journeys).
 
 ## Do not reopen
 

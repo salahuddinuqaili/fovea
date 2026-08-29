@@ -11,7 +11,7 @@ import type { AutonomyGrant } from "@/kernel/types";
 
 export const Route = createFileRoute("/_portal/policies")({ component: PoliciesPage });
 
-const BUNDLE = `policy_version: 1.3.0
+const BUNDLE = `policy_version: 1.4.0
 autonomy:
   default_stage: B
   global_switch: false
@@ -23,6 +23,8 @@ autonomy:
     revoke: os_owner_or_security
     ttl_hours: 8
     self_promote: false
+    continue_selected_read: true
+    chain_across_tasks: false
 principles:
   permission_mode: intersection
   abstention_allowed: true
@@ -144,7 +146,8 @@ function PoliciesPage() {
             <p className="mb-4 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-3 text-sm text-muted">
               Switch the header to <span className="text-fg">Alex Voss</span> (OS owner) or{" "}
               <span className="text-fg">Sam Okonkwo</span> (security) to issue or revoke a named grant. Maya cannot.
-              Wildcards, writes, duplicates, and tier 4 stay denied. A grant never promotes itself.
+              Wildcards, writes, duplicates, and tier 4 stay denied. A grant never promotes itself. An active
+              investigate-metric grant continues Maya’s next named read with sibling canonical queries.
             </p>
           )}
           {grants.length === 0 ? (
@@ -268,7 +271,7 @@ function GrantForm({
         toast.error(res.reason);
         return;
       }
-      toast.success(`Named grant ${res.grant.id} stored. Stage D was not promoted.`);
+      toast.success(`Named grant ${res.grant.id} stored. Matching reads may continue. Stage D was not promoted.`);
       onIssued();
     },
     onError: (e: Error) => toast.error(e.message),
@@ -292,7 +295,8 @@ function GrantForm({
     >
       <p className="text-xs text-muted">
         Issue a named grant. One person, one tool, one task, risk at most T3, eight-hour TTL. Duplicates are denied.
-        This record does not widen policy and does not turn on Stage D.
+        An investigate-metric grant continues Maya’s next named read with sibling queries. This does not widen policy
+        and does not turn on Stage D.
       </p>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <label className="text-xs text-muted">

@@ -129,7 +129,7 @@ export const PLAYBOOKS: Playbook[] = [
     id: "grant",
     kicker: "Grant",
     q: "Grant Maya warehouse.query for investigate-metric.",
-    why: "Named Stage D grant. Alex can issue it; Maya cannot. It never self-promotes.",
+    why: "Named Stage D grant. Maya’s next matching metric continues with sibling reads. Never self-promotes.",
     roles: ["os_owner", "security_owner"],
   },
   {

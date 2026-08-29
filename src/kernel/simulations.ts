@@ -370,6 +370,75 @@ async function grantLifecycle(store: KernelStore): Promise<Omit<SimulationResult
   };
 }
 
+async function grantContinuation(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const ungated = await runWork(store, {
+    principalId: "prin_maya",
+    message: "What was north-star revenue last week?",
+  });
+  const issued = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Grant Maya warehouse.query for investigate-metric.",
+  });
+  const chained = await runWork(store, {
+    principalId: "prin_maya",
+    message: "What was north-star revenue last week?",
+  });
+  const incident = await runWork(store, {
+    principalId: "prin_maya",
+    message: "Investigate the dip last week.",
+  });
+  const backfill = await runWork(store, {
+    principalId: "prin_maya",
+    message: "Backfill the affected partitions after the upstream correction.",
+  });
+  const revoked = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Revoke Maya warehouse.query for investigate-metric.",
+  });
+  const after = await runWork(store, {
+    principalId: "prin_maya",
+    message: "What was north-star revenue last week?",
+  });
+  const live = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Connect the live warehouse.",
+  });
+  const steps = [
+    step(
+      "ungated_single",
+      (ungated.provenance?.queries.length ?? 0) === 1 && !ungated.behaviors.includes("grant_chained"),
+      String(ungated.provenance?.queries.length),
+    ),
+    step("issued", issued.status === "completed", issued.status),
+    step("chained", chained.behaviors.includes("grant_chained"), chained.behaviors.join(",")),
+    step("queries_ge_2", (chained.provenance?.queries.length ?? 0) >= 2, String(chained.provenance?.queries.length)),
+    step("still_supported", chained.answer?.claimClass === "supported", chained.answer?.claimClass ?? "none"),
+    step("no_write", chained.behaviors.includes("no_write_executed"), "ok"),
+    step("not_promoted", chained.behaviors.includes("no_self_promotion"), "ok"),
+    step("incident_not_chained", !incident.behaviors.includes("grant_chained"), incident.behaviors.join(",")),
+    step(
+      "backfill_plan_only",
+      backfill.behaviors.includes("plan_only") && !backfill.behaviors.includes("grant_chained"),
+      backfill.status,
+    ),
+    step("revoked", revoked.behaviors.includes("grant_revoked"), revoked.status),
+    step(
+      "after_single",
+      (after.provenance?.queries.length ?? 0) === 1 && !after.behaviors.includes("grant_chained"),
+      String(after.provenance?.queries.length),
+    ),
+    step("live_still_gated", live.behaviors.includes("live_warehouse_gated"), live.status),
+  ];
+  return {
+    id: "sim_grant_continuation",
+    title: "Grant continuation",
+    persona: "Alex Voss → Maya Chen",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: steps.every((s) => s.passed) ? [] : ["Covered grant did not continue the selected read workflow."],
+  };
+}
+
 const RUNNERS = [
   analystMorning,
   sandboxWriteLoop,
@@ -381,6 +450,7 @@ const RUNNERS = [
   liveWarehouseGated,
   grantDesk,
   grantLifecycle,
+  grantContinuation,
 ];
 
 export async function runOperatorSimulations(): Promise<{

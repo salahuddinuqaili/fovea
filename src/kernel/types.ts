@@ -528,6 +528,6 @@ export interface QueryJob {
   dryRun: boolean;
 }
 
-export const AGENT_RELEASE = "fovea-5.0.0";
-export const POLICY_VERSION = "1.3.0";
+export const AGENT_RELEASE = "fovea-6.0.0";
+export const POLICY_VERSION = "1.4.0";
 export const AGENT_ID = "analytics-investigator@1.0.0";

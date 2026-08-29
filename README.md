@@ -36,8 +36,8 @@ Press **⌘K** (or **Ctrl+K**) any time you feel lost. Pick “Operator guide”
 | *Grant Maya warehouse.query for investigate-metric.* as Maya | **Refused.** Only the OS owner can issue a named grant. |
 | Same line as **Alex Voss** | A **named grant** is stored. Shadow Stage D stays `promoted=false`. |
 | Same line again as Alex | **Refused.** An active grant already covers that workflow. Revoke it first. |
-| Maya then asks north-star revenue | The answer notes it is **covered** by the named grant. |
-| *Revoke Maya warehouse.query for investigate-metric.* as Alex | Coverage ends. Maya’s next metric is not covered. |
+| Maya then asks north-star revenue | **Covered**, and **sibling canonical reads continue** in the same task. Still no write. |
+| *Revoke Maya warehouse.query for investigate-metric.* as Alex | Coverage ends. Maya’s next metric is a single query again. |
 | *Connect the live warehouse.* | **Gated.** The adapter is registered. Maya cannot arm it. Writes stay disabled. |
 | The sandbox `INSERT` from Command (or ⌘K → Sandbox write) | **Needs approval.** Maya cannot approve her own write. |
 | Then switch the header to **Jordan Hale** and approve | A short-lived sandbox credential. One row. Replay does nothing. |
@@ -62,7 +62,7 @@ That’s the first run. If those things happen, Fovea is working.
 | “Enable autonomous mode” refused | There is no global switch. | Switch to **Alex Voss** and issue a named grant (one tool, one task, a risk ceiling). |
 | Maya cannot issue a grant | Correct. Analysts do not mint Stage D. | Header → **Alex Voss** → Policy, or type the grant line in Work. |
 | Duplicate grant refused | An active grant already covers that workflow. | Revoke it first, then re-issue if you mean to. |
-| “Covered by named grant…” | The selected workflow matches an active grant. | Revoke from Policy or Work if it should stop. |
+| “Covered by named grant…” plus sibling reads | The selected `investigate-metric` workflow continued in-task. | Revoke from Policy or Work if it should stop. Writes stay hash-bound. |
 | “Connect the live warehouse” gated | The live adapter is not on Maya’s allowlist. | Ask a named metric. The fixture is still the read path. |
 
 A confident wrong number is a failure. A refusal is not.
@@ -85,13 +85,13 @@ The header switcher (or **⌘K → Act as**) is not a login. It is whose desk yo
 
 ## What this version is
 
-**v5.0 — Grant lifecycle**
+**v6.0 — Selected workflow continuation**
 
-- A named grant **covers** the matching workflow. Maya’s next north-star metric says so. It still does not widen policy and **never promotes Stage D**.
-- **Duplicates are refused.** Revoke from Policy or Work (`Revoke Maya warehouse.query for investigate-metric.`). Coverage ends immediately. Grants expire in eight hours.
-- Work is **this session**. Earlier tasks stay on Tasks — the console no longer dumps every INSERT from history.
-- Alex or Sam can issue and revoke. Maya cannot.
-- Ten operator simulations as a release input.
+- An active named grant for `warehouse.query` / `investigate-metric` / `read` **continues** Maya’s next named metric: sibling canonical reads run in the same task.
+- Without a grant, a named metric is still **one query**. After revoke, it is one query again.
+- Continuation never executes writes, backfills, or `warehouse.live`. Incident and SQL grants do not cross tasks.
+- The grant still **never promotes Stage D**.
+- Eleven operator simulations as a release input.
 
 **Not in this version**
 
@@ -122,7 +122,7 @@ migrations/     unowned control snapshot — personal memory is never stored her
 ```
 
 ```bash
-npm test         # invariants, eval hard gates, ten operator simulations
+npm test         # invariants, eval hard gates, eleven operator simulations
 npm run typecheck
 ```
 

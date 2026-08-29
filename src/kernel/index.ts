@@ -155,7 +155,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("5.0.0");
+  return runEvalSuite("6.0.0");
 }
 
 export async function runSimulations() {

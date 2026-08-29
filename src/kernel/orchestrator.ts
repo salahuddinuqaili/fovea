@@ -200,7 +200,7 @@ export async function runWork(
       behaviors,
       approvals,
       toolCalls,
-      nextAction: nextActionFor(partial.status, intent, approvals),
+      nextAction: nextActionFor(partial.status, intent, approvals, behaviors),
       evidencePack: null,
       createdAt: started,
       finishedAt: new Date().toISOString(),
@@ -655,17 +655,70 @@ async function runMetric(store: KernelStore, ctx: WorkCtx): Promise<Pick<WorkRes
   behaviors.push("query_executed_read_only", "provenance_complete");
   const last = job.rows[job.rows.length - 1];
   const prev = job.rows[job.rows.length - 2];
+  let text = interpretMetric(metric.id, last, prev);
+  const citations: NonNullable<WorkResult["answer"]>["citations"] = [
+    { label: metric.name, kind: "metric", ref: metric.id },
+    { label: job.jobId, kind: "query", ref: job.queryHash },
+    { label: "provenance", kind: "provenance", ref: provenance.resultId },
+  ];
+
+  const grant = matchingGrant(store.state.grants, {
+    principalId: ctx.principal.id,
+    tool: "warehouse.query",
+    task: "investigate-metric",
+    action: "read",
+  });
+  if (grant) {
+    const siblings = METRICS.filter((m) => m.status === "canonical" && m.id !== metric.id).slice(0, 3);
+    const supporting: string[] = [];
+    for (const sib of siblings) {
+      const sibPol = policyFor({
+        action: "read",
+        tool: "warehouse.query",
+        resource: sib.sourceTable,
+        dataClass: sib.dataClass,
+      });
+      if (sibPol.decision === "deny") continue;
+      const sibSql = sqlForMetric(sib.id);
+      const sibDry = dryRunSql(sibSql);
+      toolCalls.push(
+        wrapToolCall("warehouse.dry_run", { sql: sibSql }, { valid: sibDry.valid, scannedBytes: sibDry.scannedBytes }, { dryRun: true, costUsd: 0 }),
+      );
+      emit("tool.executed", "warehouse.dry_run");
+      const sibJob = executeReadSql(sibSql);
+      toolCalls.push(
+        wrapToolCall("warehouse.query", { sql: sibSql }, { jobId: sibJob.jobId, rowCount: sibJob.rows.length }, { costUsd: sibJob.costUsd }),
+      );
+      store.addCost({ taskId, principalId: ctx.principal.id, kind: "warehouse", amountUsd: sibJob.costUsd, detail: sibJob.jobId });
+      emit("tool.executed", "warehouse.query", { cost: sibJob.costUsd });
+      provenance.queries.push({
+        queryHash: sibJob.queryHash,
+        jobId: sibJob.jobId,
+        datasets: ["analytics"],
+        tables: sibJob.tables,
+        partitions: sibJob.rows.map((r) => String(r.week_start ?? "")),
+        executedAt: sibJob.executedAt,
+      });
+      provenance.metricDefinitions.push(sib.id);
+      const sibLast = sibJob.rows[sibJob.rows.length - 1];
+      const sibPrev = sibJob.rows[sibJob.rows.length - 2];
+      supporting.push(interpretMetric(sib.id, sibLast, sibPrev));
+      citations.push({ label: sib.name, kind: "metric", ref: sib.id });
+      citations.push({ label: sibJob.jobId, kind: "query", ref: sibJob.queryHash });
+    }
+    if (supporting.length) {
+      behaviors.push("grant_chained", "no_write_executed", "no_causal_claim");
+      text = `${text}\n\nSupporting reads under the named grant (same skill, same tool, same action — not a causal claim):\n${supporting.map((s) => `• ${s}`).join("\n")}`;
+    }
+  }
+
   return {
     status: "completed",
     sql: { query: sql, dryRun: dry, rows: job.rows },
     answer: {
       claimClass: "supported",
-      text: interpretMetric(metric.id, last, prev),
-      citations: [
-        { label: metric.name, kind: "metric", ref: metric.id },
-        { label: job.jobId, kind: "query", ref: job.queryHash },
-        { label: "provenance", kind: "provenance", ref: provenance.resultId },
-      ],
+      text,
+      citations,
     },
   };
 }
@@ -913,11 +966,17 @@ function runGrantIssue(
   });
   const shadow = shadowStageD(issued.grant);
   behaviors.push("grant_issued", "no_self_promotion", "no_write_executed");
+  const continues =
+    issued.grant.tool === "warehouse.query" &&
+    issued.grant.task === "investigate-metric" &&
+    issued.grant.actions.includes("read")
+      ? " Matching investigate-metric reads will continue with sibling canonical queries. Writes stay hash-bound."
+      : " It covers the named workflow only. Writes stay hash-bound.";
   return {
     status: "completed",
     answer: {
       claimClass: "derived",
-      text: `Named grant ${issued.grant.id} stored: ${issued.grant.tool} / ${issued.grant.task} for ${issued.grant.principalId}, max risk T${issued.grant.maxRisk}, actions ${issued.grant.actions.join(", ")}. Expires ${issued.grant.expiresAt}. Shadow Stage D: eligible=${shadow.eligible}, promoted=${shadow.promoted}. Production execution stays disabled.`,
+      text: `Named grant ${issued.grant.id} stored: ${issued.grant.tool} / ${issued.grant.task} for ${issued.grant.principalId}, max risk T${issued.grant.maxRisk}, actions ${issued.grant.actions.join(", ")}. Expires ${issued.grant.expiresAt}.${continues} Shadow Stage D: eligible=${shadow.eligible}, promoted=${shadow.promoted}. Production execution stays disabled.`,
       citations: [
         { label: issued.grant.id, kind: "policy", ref: issued.grant.id },
         { label: issued.grant.tool, kind: "policy", ref: issued.grant.tool },
@@ -1003,10 +1062,13 @@ function applyGrantCoverage(
     action: "read",
   });
   if (!hit || !partial.answer) return;
+  const chained = behaviors.includes("grant_chained");
   behaviors.push("grant_covers", "no_self_promotion");
   partial.answer = {
     ...partial.answer,
-    text: `${partial.answer.text}\n\nCovered by named grant ${hit.id} until ${hit.expiresAt}. Selected workflow only. Stage D was not promoted.`,
+    text: chained
+      ? `${partial.answer.text}\n\nCovered by named grant ${hit.id} until ${hit.expiresAt}. Selected workflow continued with sibling canonical reads. Writes stay hash-bound. Stage D was not promoted.`
+      : `${partial.answer.text}\n\nCovered by named grant ${hit.id} until ${hit.expiresAt}. Selected workflow only. Stage D was not promoted.`,
     citations: [...partial.answer.citations, { label: hit.id, kind: "policy", ref: hit.id }],
   };
 }
@@ -1031,6 +1093,7 @@ function nextActionFor(
   status: WorkResult["status"],
   intent: Intent,
   approvals: Approval[],
+  behaviors: string[] = [],
 ): NextAction | null {
   if (status === "needs_approval") {
     const hash = approvals[0]?.proposedActionHash.slice(0, 12);
@@ -1050,10 +1113,13 @@ function nextActionFor(
     };
   }
   if (status === "completed" && (intent === "metric" || intent === "incident")) {
+    const chained = behaviors.includes("grant_chained");
     return {
       label: "Plan the affected backfill",
       href: "/work?q=" + encodeURIComponent("Backfill the affected partitions after the upstream correction."),
-      hint: "The 2026-08-24 week may be incomplete. Plan, don’t execute.",
+      hint: chained
+        ? "Selected workflow continued. Writes stay hash-bound — plan the backfill, don’t execute it."
+        : "The 2026-08-24 week may be incomplete. Plan, don’t execute.",
     };
   }
   if (status === "completed" && intent === "sql") {
@@ -1070,7 +1136,7 @@ function nextActionFor(
       hint:
         intent === "grant_revoke"
           ? "Grant retracted. It did not promote Stage D."
-          : "Named grant stored. It did not promote Stage D.",
+          : "Named grant stored. Maya’s next matching read continues in-task. It did not promote Stage D.",
     };
   }
   if (status === "refused") {

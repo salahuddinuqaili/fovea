@@ -49,12 +49,19 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - Command featured playbooks (Autonomy / Live no longer sliced away). Work starters, pre-wrapped briefs, evidence download.
 - Nine operator simulations as a release input.
 
-## v5 — Grant lifecycle (this tree)
+## v5 — Grant lifecycle
 
 - Active grants cover the matching named workflow (read-only). They do not widen policy and do not promote Stage D.
 - Duplicate active grants are refused. Owners can revoke. Grants expire in eight hours.
 - Work console is this session; durable history stays on Tasks.
 - Ten operator simulations as a release input.
+
+## v6 — Selected workflow continuation (this tree)
+
+- A covered `investigate-metric` grant continues Maya’s named read with sibling canonical queries in the same task.
+- Without a grant (or after revoke) the metric stays a single query.
+- Writes, backfills, and `warehouse.live` are not continued. Grants do not chain across tasks.
+- Eleven operator simulations as a release input.
 
 ## Later — Accounts and a real warehouse DSN
 
