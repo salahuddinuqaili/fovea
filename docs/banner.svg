@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="248" viewBox="0 0 1280 248" role="img" aria-labelledby="title desc">
+  <title id="title">Fovea</title>
+  <desc id="desc">Control plane for enterprise analytics agents. Named metrics return evidence. Writes are hash-bound. Production stays gated.</desc>
+  <rect width="1280" height="248" fill="#09090B"/>
+  <rect x="0.5" y="0.5" width="1279" height="247" fill="none" stroke="#F2F0EA" stroke-opacity="0.12"/>
+
+  <g transform="translate(56, 32)" fill="none">
+    <circle cx="34" cy="34" r="32" stroke="#C5CDD6" stroke-width="1" opacity="0.35"/>
+    <circle cx="34" cy="34" r="20" stroke="#C5CDD6" stroke-width="1.2" opacity="0.7"/>
+    <circle cx="34" cy="34" r="7" fill="#C5CDD6" stroke="none"/>
+  </g>
+
+  <text x="140" y="56" fill="#F2F0EA" font-family="Georgia, 'Times New Roman', Times, serif" font-size="36">Fovea</text>
+  <text x="140" y="84" fill="#8F8F98" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif" font-size="15">Control plane for enterprise analytics agents</text>
+  <text x="1224" y="58" fill="#6B6B73" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" text-anchor="end">v12 · Apache-2.0 · Stage B</text>
+
+  <line x1="56" y1="116" x2="1224" y2="116" stroke="#F2F0EA" stroke-opacity="0.12"/>
+
+  <text x="56" y="148" fill="#6B6B73" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" letter-spacing="2.4">READS</text>
+  <text x="56" y="176" fill="#F2F0EA" font-family="Georgia, 'Times New Roman', Times, serif" font-size="22">Evidence or stop</text>
+  <text x="56" y="202" fill="#8F8F98" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Named metrics. SQL. Provenance. No guessed definitions.</text>
+
+  <text x="488" y="148" fill="#6B6B73" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" letter-spacing="2.4">WRITES</text>
+  <text x="488" y="176" fill="#F2F0EA" font-family="Georgia, 'Times New Roman', Times, serif" font-size="22">Hash-bound</text>
+  <text x="488" y="202" fill="#8F8F98" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Exact-hash approval. Sandbox only. Production gated.</text>
+
+  <text x="900" y="148" fill="#6B6B73" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11" letter-spacing="2.4">POLICY</text>
+  <text x="900" y="176" fill="#F2F0EA" font-family="Georgia, 'Times New Roman', Times, serif" font-size="22">Intersection</text>
+  <text x="900" y="202" fill="#8F8F98" font-family="ui-sans-serif, system-ui, sans-serif" font-size="14">Never union. No global autonomy switch.</text>
+</svg>
