@@ -1,0 +1,30 @@
+policy_version: 1.0.0
+autonomy:
+  default_stage: B
+principles:
+  permission_mode: intersection
+  abstention_allowed: true
+  provenance_required_for_material_results: true
+  arbitrary_tool_installation: false
+  self_modification: propose_only
+writes:
+  B:
+    default: require_approval
+    execution: disabled
+permanent_human_gate:
+  - iam.change
+  - protected_dataset.delete
+  - canonical_metric.change
+  - sensitive_export
+  - mass_communication
+  - agentic_os.security_change
+  - eval_gate_weakening
+  - signing_authority.change
+backfill:
+  production:
+    stage_B: plan_only
+memory:
+  personal:
+    cross_user_access: deny
+    admin_default_access: deny
+    automatic_promotion: deny

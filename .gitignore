@@ -1,0 +1,17 @@
+node_modules/
+.node_modules.lock
+.vercel/
+.nitro/
+.output/
+dist/
+.grok/
+screenshots/
+artifacts/
+attachments/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+public/__grok/
+AGENTS.md

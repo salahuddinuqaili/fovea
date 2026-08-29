@@ -1,0 +1,17 @@
+{
+  "$id": "https://fovea.dev/schemas/policy-request.schema.json",
+  "type": "object",
+  "required": ["principalId", "agent", "task", "tool", "action", "resource", "dataClass", "estimatedCost", "autonomyStage", "environment"],
+  "properties": {
+    "principalId": { "type": "string" },
+    "agent": { "type": "string" },
+    "task": { "type": "string" },
+    "tool": { "type": "string" },
+    "action": { "type": "string" },
+    "resource": { "type": "string" },
+    "dataClass": { "enum": ["public", "internal", "confidential", "restricted"] },
+    "estimatedCost": { "type": "number" },
+    "autonomyStage": { "enum": ["B", "C", "D"] },
+    "environment": { "enum": ["dev", "staging", "prod", "demo"] }
+  }
+}
