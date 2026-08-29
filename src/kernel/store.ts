@@ -9,6 +9,7 @@ import type {
   AutonomyGrant,
   BackfillPlan,
   CostRecord,
+  DeskHandoff,
   ImprovementEvent,
   KillSwitchState,
   MemoryItem,
@@ -21,6 +22,7 @@ import type {
 } from "./types.ts";
 import { AGENT_RELEASE, KERNEL_VERSION, POLICY_VERSION } from "./types.ts";
 import { isGrantActive } from "./grants.ts";
+import { isHandoffOpen, normalizeHandoff, pruneHandoffs } from "./handoffs.ts";
 
 export interface KernelState {
   sessions: Session[];
@@ -38,6 +40,7 @@ export interface KernelState {
   credentials: WriteCredential[];
   sandbox: SandboxState;
   grants: AutonomyGrant[];
+  handoffs: DeskHandoff[];
 }
 
 export function emptyKill(): KillSwitchState {
@@ -57,7 +60,7 @@ export function emptyKill(): KillSwitchState {
 export function seedState(): KernelState {
   const release = buildRelease({
     version: KERNEL_VERSION,
-    sourceCommit: "v80align01",
+    sourceCommit: "v90inbox01",
     tree: SEED_TREE,
   });
   return {
@@ -76,6 +79,7 @@ export function seedState(): KernelState {
     credentials: [],
     sandbox: seedSandbox(),
     grants: [],
+    handoffs: [],
   };
 }
 
@@ -120,6 +124,7 @@ function normalizeState(s: KernelState): KernelState {
     credentials: s.credentials ?? [],
     sandbox: s.sandbox ?? seedSandbox(),
     grants: (s.grants ?? []).map(normalizeGrant),
+    handoffs: (s.handoffs ?? []).map(normalizeHandoff),
   };
 }
 
@@ -248,6 +253,27 @@ export class KernelStore {
     else this.state.grants.unshift(grant);
     this.state.grants = pruneGrants(this.state.grants);
   }
+
+  addHandoff(handoff: DeskHandoff) {
+    this.state.handoffs = this.state.handoffs.filter(
+      (h) =>
+        !(
+          isHandoffOpen(h) &&
+          h.toPrincipalId === handoff.toPrincipalId &&
+          h.kind === handoff.kind &&
+          h.href === handoff.href
+        ),
+    );
+    this.state.handoffs.unshift(handoff);
+    this.state.handoffs = pruneHandoffs(this.state.handoffs);
+  }
+
+  applyHandoff(handoff: DeskHandoff) {
+    const i = this.state.handoffs.findIndex((h) => h.id === handoff.id);
+    if (i >= 0) this.state.handoffs[i] = handoff;
+    else this.state.handoffs.unshift(handoff);
+    this.state.handoffs = pruneHandoffs(this.state.handoffs);
+  }
 }
 
 function pruneGrants(grants: AutonomyGrant[]): AutonomyGrant[] {
@@ -263,7 +289,11 @@ const g = globalThis as typeof globalThis & {
 
 export function getStore(): KernelStore {
   if (!g.__foveaStore) g.__foveaStore = new KernelStore();
-  else if (typeof g.__foveaStore.applyGrant !== "function" || typeof g.__foveaStore.addGrant !== "function") {
+  else if (
+    typeof g.__foveaStore.applyGrant !== "function" ||
+    typeof g.__foveaStore.addGrant !== "function" ||
+    typeof g.__foveaStore.addHandoff !== "function"
+  ) {
     g.__foveaStore = new KernelStore(g.__foveaStore.state);
   }
   g.__foveaStore.state = alignLoadedRelease(normalizeState(g.__foveaStore.state));
@@ -272,7 +302,7 @@ export function getStore(): KernelStore {
 
 function alignLoadedRelease(state: KernelState): KernelState {
   if (state.loadedRelease?.version === KERNEL_VERSION) return state;
-  const fresh = buildRelease({ version: KERNEL_VERSION, sourceCommit: "v80align01", tree: SEED_TREE });
+  const fresh = buildRelease({ version: KERNEL_VERSION, sourceCommit: "v90inbox01", tree: SEED_TREE });
   const releases = [fresh, ...(state.releases ?? []).filter((r) => r.version !== KERNEL_VERSION)];
   return { ...state, loadedRelease: fresh, releases, loadError: null };
 }

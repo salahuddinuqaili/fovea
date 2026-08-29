@@ -11,6 +11,7 @@ import { dryRunSql, executeReadSql, lintSql, readRepo, readTicket, wrapToolCall 
 import { validateSandboxWriteSql } from "./sql.ts";
 import { connectLiveWarehouse } from "./warehouse.ts";
 import { findGrant, grantContinuesReads, grantHoursLeft, isGrantActive, issueGrant, matchingGrant, parseGrantRequest, parseRevokeRequest, revokeGrant, shadowStageD } from "./grants.ts";
+import { makeHandoff } from "./handoffs.ts";
 import type {
   Approval,
   NextAction,
@@ -207,6 +208,7 @@ export async function runWork(
       status: partial.status,
     };
     result.evidencePack = toEvidencePack(result);
+    recordHandoffs(store, result);
     emit("result.produced", `status=${result.status}`);
     emit("provenance.finalized", result.provenance?.resultId ?? "");
     store.addTask(result);
@@ -527,6 +529,21 @@ function runWriteProposal(ctx: {
       dataClass: "internal",
       estimatedCost: 0.02,
     });
+    if (decision.decision === "deny") {
+      ctx.behaviors.push("refused_policy", "no_write_executed", "no_approval_queued");
+      return {
+        status: "refused",
+        sql: {
+          query: valid.normalized,
+          dryRun: { valid: true, scannedBytes: 0, estimatedCost: 0.02, notes: valid.notes },
+        },
+        answer: {
+          claimClass: "refusal",
+          text: `Sandbox write refused. ${decision.reason} No approval was queued.`,
+          citations: [{ label: "sandbox write", kind: "policy", ref: "warehouse.sandbox_write" }],
+        },
+      };
+    }
     ctx.behaviors.push("write_gated", "sandbox_write_proposed", "no_prod_write");
     ctx.toolCalls.push(
       wrapToolCall(
@@ -579,6 +596,17 @@ function runWriteProposal(ctx: {
     dataClass: "confidential",
     estimatedCost: 40,
   });
+  if (decision.decision === "deny") {
+    ctx.behaviors.push("refused_policy", "no_write_executed", "no_approval_queued");
+    return {
+      status: "refused",
+      answer: {
+        claimClass: "refusal",
+        text: `Production write refused. ${decision.reason} No approval was queued.`,
+        citations: [{ label: "prod writes", kind: "policy", ref: "autonomy.B" }],
+      },
+    };
+  }
   const approval = makeApproval(
     ctx.taskId,
     ctx.principalId,
@@ -595,7 +623,7 @@ function runWriteProposal(ctx: {
     status: "needs_approval",
     answer: {
       claimClass: "refusal",
-      text: `Production write proposed. Policy decision: ${decision.decision}. ${decision.reason} Approval is bound to hash ${approval.proposedActionHash.slice(0, 12)}… Even after approval, v1 will not mint a production credential or execute against analytics.*. Use sandbox.* for Stage C writes.`,
+      text: `Production write proposed. Policy decision: ${decision.decision}. ${decision.reason} Approval is bound to hash ${approval.proposedActionHash.slice(0, 12)}… Even after approval, this release will not mint a production credential or execute against analytics.*. Use sandbox.* for Stage C writes.`,
       citations: [{ label: "prod writes", kind: "policy", ref: "autonomy.B" }],
     },
   };
@@ -1092,6 +1120,23 @@ function titleFor(intent: Intent, message: string) {
   return message.slice(0, 48) || "Task";
 }
 
+function recordHandoffs(store: KernelStore, result: WorkResult) {
+  const na = result.nextAction;
+  if (!na?.asPrincipalId || na.asPrincipalId === result.principalId) return;
+  store.addHandoff(
+    makeHandoff({
+      fromPrincipalId: result.principalId,
+      toPrincipalId: na.asPrincipalId,
+      kind: na.href.includes("approvals") ? "approval" : na.href.includes("policies") ? "policy" : "work",
+      label: na.label,
+      href: na.href,
+      hint: na.hint,
+      taskId: result.taskId,
+    }),
+  );
+  result.behaviors.push("handoff_created");
+}
+
 function nextActionFor(
   status: WorkResult["status"],
   intent: Intent,
@@ -1103,11 +1148,12 @@ function nextActionFor(
   if (status === "needs_approval") {
     const hash = approvals[0]?.proposedActionHash.slice(0, 12);
     return {
-      label: "Open approvals",
+      label: "Open Jordan’s approvals",
       href: "/approvals",
       hint: hash
-        ? `Bound hash ${hash}… Switch to Jordan Hale (approver) to decide this exact action.`
-        : "An approver must accept the exact action hash. Switch to Jordan Hale.",
+        ? `Bound hash ${hash}… Switch the header to Jordan Hale. Do not decide this hash as the requester.`
+        : "Switch the header to Jordan Hale. Analysts cannot mint a write credential.",
+      asPrincipalId: "prin_jordan",
     };
   }
   if (status === "abstained") {
@@ -1324,7 +1370,7 @@ export function decideApproval(
   if (!actor) throw new Error("Unknown principal");
   const approval = store.state.approvals.find((a) => a.approvalId === input.approvalId);
   if (!approval) throw new Error("Unknown approval");
-  if (!actor.roles.includes("approver") && !actor.roles.includes("os_owner")) {
+  if (!actor.roles.includes("approver")) {
     store.emit({
       taskId: approval.taskId,
       sessionId: null,
@@ -1336,6 +1382,9 @@ export function decideApproval(
       summary: "Actor lacks approver role",
     });
     throw new Error("Approver role required.");
+  }
+  if (approval.requestedBy === actor.id) {
+    throw new Error("Requester cannot approve their own write.");
   }
   if (approval.decision !== "pending") {
     if (input.decision === "approved" && approval.decision === "approved") {

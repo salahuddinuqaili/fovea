@@ -11,7 +11,7 @@ import type { AutonomyGrant } from "@/kernel/types";
 
 export const Route = createFileRoute("/_portal/policies")({ component: PoliciesPage });
 
-const BUNDLE = `policy_version: 1.6.0
+const BUNDLE = `policy_version: 1.7.0
 autonomy:
   default_stage: B
   global_switch: false
@@ -27,6 +27,14 @@ autonomy:
     chain_across_tasks: false
     desk_visible: true
     issuer_visible: true
+desks:
+  handoff: named
+  ttl_hours: 8
+  work_session: this_session
+  audit_stream: role_gated
+  denied_write: no_queue
+  sod: approver_only
+  self_approve: deny
 control_plane:
   snapshot_align: kernel_wins
   pending_execute: deny
@@ -284,7 +292,7 @@ function GrantForm({
         toast.error(res.reason);
         return;
       }
-      toast.success(`Named grant ${res.grant.id} stored. Switch to the grantee — Work will show it. Stage D was not promoted.`);
+      toast.success(`Named grant ${res.grant.id} stored. Switch to the grantee — Command will show the handoff. Stage D was not promoted.`);
       onIssued();
     },
     onError: (e: Error) => toast.error(e.message),

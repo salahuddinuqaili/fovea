@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { healthFn, setKillFn } from "@/lib/api";
+import { healthFn, setKillFn, bootstrapFn } from "@/lib/api";
 import { useFoveaSession } from "@/lib/session";
 
 export const Route = createFileRoute("/_portal/health")({ component: HealthPage });
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/_portal/health")({ component: HealthPage 
 function HealthPage() {
   const actorId = useFoveaSession((s) => s.principalId);
   const qc = useQueryClient();
+  const boot = useQuery({ queryKey: ["bootstrap"], queryFn: () => bootstrapFn() });
   const q = useQuery({ queryKey: ["health"], queryFn: () => healthFn() });
   const mut = useMutation({
     mutationFn: (patch: { writePlane?: boolean; entireOs?: boolean }) => setKillFn({ data: { actorId, patch } }),
@@ -25,6 +26,8 @@ function HealthPage() {
   const live = h?.warehouses?.find((w) => w.id === "live");
   const liveConnected = Boolean(live?.connected);
   const liveWritesOff = live?.writes === "disabled";
+  const actor = boot.data?.principals.find((p) => p.id === actorId);
+  const canKill = Boolean(actor?.roles.includes("security_owner") || actor?.roles.includes("os_owner"));
 
   return (
     <div>
@@ -49,22 +52,29 @@ function HealthPage() {
           tone={!liveWritesOff ? "danger" : liveConnected ? "ok" : "warn"}
         />
         <Card k="Pending approvals" v={String(h?.pendingApprovals ?? 0)} tone="ok" />
+        <Card k="Open handoffs" v={String(h?.openHandoffs ?? 0)} tone="ok" />
         <Card k="Active grants" v={String(h?.activeGrants ?? 0)} tone="ok" />
       </div>
-      <div className="flex flex-wrap gap-2 px-4 md:px-8">
-        <Button variant="secondary" onClick={() => mut.mutate({ writePlane: true })}>
-          Disable writes
-        </Button>
-        <Button variant="secondary" onClick={() => mut.mutate({ writePlane: false })}>
-          Restore writes (gated)
-        </Button>
-        <Button variant="danger" onClick={() => mut.mutate({ entireOs: true })}>
-          Disable OS
-        </Button>
-        <Button variant="secondary" onClick={() => mut.mutate({ entireOs: false })}>
-          Restore OS
-        </Button>
-      </div>
+      {canKill ? (
+        <div className="flex flex-wrap gap-2 px-4 md:px-8">
+          <Button variant="secondary" onClick={() => mut.mutate({ writePlane: true })}>
+            Disable writes
+          </Button>
+          <Button variant="secondary" onClick={() => mut.mutate({ writePlane: false })}>
+            Restore writes (gated)
+          </Button>
+          <Button variant="danger" onClick={() => mut.mutate({ entireOs: true })}>
+            Disable OS
+          </Button>
+          <Button variant="secondary" onClick={() => mut.mutate({ entireOs: false })}>
+            Restore OS
+          </Button>
+        </div>
+      ) : (
+        <p className="px-4 text-sm text-muted md:px-8">
+          Kill switches require Sam Okonkwo (security) or Alex Voss (OS owner). Analysts and approvers cannot flip them.
+        </p>
+      )}
       <div className="grid gap-6 p-4 md:grid-cols-2 md:p-8">
         <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-5">
           <h2 className="text-sm font-medium">Models</h2>

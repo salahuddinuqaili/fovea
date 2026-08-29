@@ -1,6 +1,7 @@
-policy_version: 1.1.0
+policy_version: 1.7.0
 autonomy:
   default_stage: B
+  global_switch: false
 principles:
   permission_mode: intersection
   abstention_allowed: true
@@ -12,6 +13,7 @@ writes:
     default: require_approval
     production_execution: disabled
     sandbox_after_approval: credential_broker
+    denied: no_queue
 permanent_human_gate:
   - iam.change
   - protected_dataset.delete
@@ -21,9 +23,17 @@ permanent_human_gate:
   - agentic_os.security_change
   - eval_gate_weakening
   - signing_authority.change
+  - autonomy.global
 backfill:
   production:
     v1: plan_only
+desks:
+  handoff: named
+  ttl_hours: 8
+  work_session: this_session
+  audit_stream: role_gated
+  sod: approver_only
+  self_approve: deny
 memory:
   personal:
     cross_user_access: deny

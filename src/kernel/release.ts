@@ -68,7 +68,7 @@ export function unsigned(release: ReleaseArtifact): ReleaseArtifact {
 }
 
 export const SEED_TREE = {
-  kernel: "fovea-8.0.0",
+  kernel: "fovea-9.0.0",
   policies: POLICY_VERSION,
   evals: "v1.0.0",
 };

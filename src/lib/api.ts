@@ -21,6 +21,7 @@ import {
   tryLoadRelease,
   putGrant,
   retractGrant,
+  openHandoff,
 } from "@/kernel";
 import { controlMeta, withControlPlane } from "@/lib/control-persist";
 import type { KillSwitchState, SkillManifest } from "@/kernel/types";
@@ -150,3 +151,7 @@ export const retractGrantFn = createServerFn({ method: "POST" })
       }),
     ),
   );
+
+export const openHandoffFn = createServerFn({ method: "POST" })
+  .validator((d: { actorId: string; handoffId: string }) => d)
+  .handler(async ({ data }) => withControlPlane(() => openHandoff(data.actorId, data.handoffId)));

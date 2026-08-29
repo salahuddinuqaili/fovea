@@ -2,7 +2,7 @@
 
 This is an **open-source Agentic OS** (name: **Fovea**). Continue in place. Do not scaffold a new app.
 
-## Current version: v8.0.0 — Honest control plane (prod exec still off, Auth still OFF)
+## Current version: v9.0.0 — This-session console / named desks (prod exec still off, Auth still OFF)
 
 Locked defaults:
 
@@ -14,11 +14,12 @@ Locked defaults:
 - Stage D is selected workflows only: per-tool, per-task, per-risk grants. **No global autonomous switch — not planned, not later.** A global switch would union permissions across principals. Intersection forbids that. `autonomy.global` stays a permanent human gate.
 - Alex (OS owner) or Sam (security) can issue and revoke a named grant from Policy or Work. Maya cannot. Wildcards, writes, duplicates, and T4 are denied. A grant never self-promotes. An active `warehouse.query` / `investigate-metric` / `read` grant continues Maya’s next named metric with sibling canonical reads in the same task. Without a grant, a metric is one query. Grants do not chain across tasks and never execute writes.
 - Covering grants are visible on the grantee’s Command and Work before they ask. Issued grants are also visible on the issuer’s Command and on Health. Next actions switch desk; they do not run as the issuer.
+- Work is this session (tab). Named handoffs land on the target desk. Jordan sees a pending queue. Maya’s Command audit is her desk. Denied writes are not queued. Only an approver who is not the requester can decide.
 - The running kernel’s signed release wins when the snapshot lags. Pending execute is denied. `warehouse.live` is not on the OS allowlist.
 - Live warehouse adapter is registered and policy-gated. No DSN in the demo. Writes stay disabled.
 - Releases sign and verify through the demo KMS. `--skip-signature-check` does not exist.
 - Skills: investigate-metric, investigate-incident, write-and-validate-sql, plan-backfill, session-close
-- Operator simulations in `src/kernel/simulations.ts` are a release input (thirteen journeys).
+- Operator simulations in `src/kernel/simulations.ts` are a release input (fourteen journeys).
 
 ## Do not reopen
 

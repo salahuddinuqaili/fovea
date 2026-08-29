@@ -550,7 +550,39 @@ export interface ActiveGrantView {
   expiresAt: string;
 }
 
-export const KERNEL_VERSION = "8.0.0";
-export const AGENT_RELEASE = "fovea-8.0.0";
-export const POLICY_VERSION = "1.6.0";
+export interface DeskHandoff {
+  id: string;
+  fromPrincipalId: string;
+  toPrincipalId: string;
+  kind: "work" | "approval" | "policy";
+  label: string;
+  href: string;
+  hint: string;
+  taskId: string | null;
+  createdAt: string;
+  expiresAt: string;
+  openedAt: string | null;
+}
+
+export interface InboxHandoffView {
+  id: string;
+  fromName: string;
+  kind: DeskHandoff["kind"];
+  label: string;
+  href: string;
+  hint: string;
+  expiresAt: string;
+}
+
+export interface InboxApprovalView {
+  approvalId: string;
+  requestedByName: string;
+  actionSummary: string;
+  hash: string;
+  estimatedCost: number;
+}
+
+export const KERNEL_VERSION = "9.0.0";
+export const AGENT_RELEASE = "fovea-9.0.0";
+export const POLICY_VERSION = "1.7.0";
 export const AGENT_ID = "analytics-investigator@1.0.0";

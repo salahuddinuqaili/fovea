@@ -1,9 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
-import { bootstrapFn, overviewFn } from "@/lib/api";
+import { bootstrapFn, openHandoffFn, overviewFn } from "@/lib/api";
 import { FIRST_RUN, COMMAND_FEATURED, featuredPlaybooks } from "@/lib/playbooks";
 import { useFoveaSession } from "@/lib/session";
 import { formatUsd } from "@/lib/utils";
@@ -12,6 +12,8 @@ export const Route = createFileRoute("/_portal/")({ component: CommandCenter });
 
 function CommandCenter() {
   const principalId = useFoveaSession((s) => s.principalId);
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const boot = useQuery({ queryKey: ["bootstrap"], queryFn: () => bootstrapFn() });
   const q = useQuery({
     queryKey: ["overview", principalId],
@@ -21,13 +23,36 @@ function CommandCenter() {
   const verified = boot.data?.verification.ok ?? data?.verification.ok ?? false;
   const principal = boot.data?.principals.find((p) => p.id === principalId);
   const books = featuredPlaybooks(principal?.roles ?? ["analyst"], COMMAND_FEATURED);
+  const inbox = data?.inbox;
+  const hasInbox = Boolean((inbox?.handoffs.length ?? 0) + (inbox?.pendingForDesk.length ?? 0));
+  const openInbox = useMutation({
+    mutationFn: (handoffId: string) => openHandoffFn({ data: { actorId: principalId, handoffId } }),
+    onSuccess: (res) => {
+      void qc.invalidateQueries();
+      if (!res.ok) return;
+      const path = res.handoff.href.split("?")[0] || "/";
+      if (path === "/approvals") {
+        void navigate({ to: "/approvals" });
+        return;
+      }
+      if (path === "/policies") {
+        void navigate({ to: "/policies" });
+        return;
+      }
+      if (path === "/work") {
+        void navigate({ to: "/work" });
+        return;
+      }
+      void navigate({ to: "/" });
+    },
+  });
 
   return (
     <div>
       <PageHeader
         kicker="Control plane"
         title="Command"
-        description="Ask a named metric. If Fovea cannot establish the number, it abstains. Writes need an exact-hash approval. New here? Open the operator guide."
+        description="This is this desk. Handoffs land here. Writes need an exact-hash approval. Analysts cannot mint a credential. New here? Open the operator guide."
         actions={
           <Link to="/guide" className="text-sm underline">
             Operator guide
@@ -50,13 +75,61 @@ function CommandCenter() {
           value={verified ? "Verified" : "Blocked"}
           hint={boot.data?.agentRelease ?? data?.release?.version ?? "—"}
         />
-        <Stat label="Pending approvals" value={String(data?.pendingApprovals.length ?? 0)} hint="Exact-hash bound" />
+        <Stat
+          label="This desk"
+          value={String((inbox?.handoffs.length ?? 0) + (inbox?.pendingForDesk.length ?? 0))}
+          hint={
+            (inbox?.pendingForDesk.length ?? 0) > 0
+              ? `${inbox!.pendingForDesk.length} pending hash${inbox!.pendingForDesk.length === 1 ? "" : "es"}`
+              : "Named handoffs, eight-hour TTL"
+          }
+        />
         <Stat
           label="Budget left"
           value={formatUsd(data?.budgetRemainingUsd ?? 25, 2)}
           hint={`${formatUsd(data?.spentUsd ?? 0, 3)} spent of ${formatUsd(data?.budgetUsd ?? 25, 0)}`}
         />
       </div>
+
+      {hasInbox ? (
+        <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border-strong bg-surface p-5 md:mx-8">
+          <h2 className="text-sm font-medium">Waiting on {principal?.displayName.split(" ")[0] ?? "this desk"}</h2>
+          <p className="mt-1 text-xs text-muted">
+            Named handoffs, not a global queue. Opening one switches this desk — it does not run as someone else.
+          </p>
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {(inbox?.pendingForDesk ?? []).map((a) => (
+              <Link
+                key={a.approvalId}
+                to="/approvals"
+                className="rounded-[var(--radius-md)] border border-border bg-bg p-4 hover:border-border-strong"
+              >
+                <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">
+                  Pending · {a.requestedByName}
+                </div>
+                <div className="mt-1 text-sm text-fg">{a.actionSummary}</div>
+                <div className="mt-1 font-mono text-[11px] text-muted">
+                  {a.hash.slice(0, 12)}… · {formatUsd(a.estimatedCost, 2)}
+                </div>
+              </Link>
+            ))}
+            {(inbox?.handoffs ?? []).map((h) => (
+              <button
+                key={h.id}
+                type="button"
+                onClick={() => openInbox.mutate(h.id)}
+                className="rounded-[var(--radius-md)] border border-border bg-bg p-4 text-left hover:border-border-strong"
+              >
+                <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">
+                  {h.kind} · {h.fromName}
+                </div>
+                <div className="mt-1 text-sm text-fg">{h.label}</div>
+                <div className="mt-1 text-xs text-muted">{h.hint}</div>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
           <h2 className="text-sm font-medium">
@@ -142,7 +215,9 @@ function CommandCenter() {
           </div>
         </section>
         <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-5">
-          <h2 className="mb-3 text-sm font-medium">Audit stream</h2>
+          <h2 className="mb-3 text-sm font-medium">
+            {inbox?.auditScope === "org" ? "Audit stream" : "This desk’s events"}
+          </h2>
           <div className="space-y-2 font-mono text-[11px] text-muted">
             {(data?.recentEvents ?? []).slice(0, 8).map((e) => (
               <div key={e.eventId} className="flex gap-3">

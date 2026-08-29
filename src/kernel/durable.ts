@@ -1,10 +1,12 @@
 import { seedSandbox, type SandboxState } from "./sandbox.ts";
 import { emptyKill, type KernelState } from "./store.ts";
+import { normalizeHandoff } from "./handoffs.ts";
 import type {
   Approval,
   AuditEvent,
   AutonomyGrant,
   CostRecord,
+  DeskHandoff,
   ImprovementEvent,
   KillSwitchState,
   MemoryItem,
@@ -33,6 +35,7 @@ export interface DurableSlice {
   credentials: WriteCredential[];
   sandbox: SandboxState;
   grants?: AutonomyGrant[];
+  handoffs?: DeskHandoff[];
 }
 
 /**
@@ -57,6 +60,7 @@ export function durableSlice(state: KernelState): DurableSlice {
     credentials: state.credentials,
     sandbox: state.sandbox,
     grants: state.grants ?? [],
+    handoffs: state.handoffs ?? [],
   };
 }
 
@@ -99,6 +103,7 @@ export function applyDurableSlice(state: KernelState, slice: DurableSlice): Kern
     credentials: slice.credentials ?? [],
     sandbox: slice.sandbox ?? seedSandbox(),
     grants: (slice.grants ?? state.grants ?? []).map(normalizeGrant),
+    handoffs: (slice.handoffs ?? state.handoffs ?? []).map(normalizeHandoff),
   };
 }
 

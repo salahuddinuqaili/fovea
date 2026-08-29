@@ -78,6 +78,14 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - Evidence includes sibling SQL. Pending execute is denied. `warehouse.live` is off the OS allowlist.
 - Thirteen operator simulations as a release input.
 
+## v9 — This-session console / named desks (this tree)
+
+- Work threads persist for the tab. Auto-run `?q=` is consumed once and stripped from the URL.
+- Named `DeskHandoff` (8h TTL): Maya’s write lands on Jordan’s Command; Alex’s grant lands on Maya’s.
+- Approver-only separation of duties. Requesters cannot self-approve. OS owners are not hidden super-approvers.
+- Denied writes are refused, not queued. Command audit is role-gated (Maya sees this desk; Riley sees the stream).
+- Fourteen operator simulations as a release input.
+
 ## Later — Accounts and a real warehouse DSN
 
 - SSO / accounts only when the user explicitly asks for them (Auth stays OFF until then)

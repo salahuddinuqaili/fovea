@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import { bootstrapFn, listTasksFn, overviewFn, submitWorkFn } from "@/lib/api";
+import { bootstrapFn, listTasksFn, openHandoffFn, overviewFn, submitWorkFn } from "@/lib/api";
 import { featuredPlaybooks, WORK_STARTERS } from "@/lib/playbooks";
-import { useFoveaSession } from "@/lib/session";
+import { useFoveaSession, useWorkSession } from "@/lib/session";
 import { cn, formatUsd, shortId } from "@/lib/utils";
 import type { EvidencePack, NextAction, WorkResult } from "@/kernel/types";
 import { evidencePackJson } from "@/kernel/evidence";
@@ -26,9 +26,13 @@ function WorkPage() {
   const navigate = useNavigate();
   const principalId = useFoveaSession((s) => s.principalId);
   const setPrincipalId = useFoveaSession((s) => s.setPrincipalId);
+  const threads = useWorkSession((s) => s.threads);
+  const selectedId = useWorkSession((s) => s.selectedId);
+  const pushResult = useWorkSession((s) => s.pushResult);
+  const selectResult = useWorkSession((s) => s.selectResult);
+  const markConsumedQ = useWorkSession((s) => s.markConsumedQ);
+  const hasConsumedQ = useWorkSession((s) => s.hasConsumedQ);
   const [draft, setDraft] = useState(q ?? "");
-  const [threads, setThreads] = useState<Record<string, WorkResult[]>>({});
-  const [selectedId, setSelectedId] = useState<Record<string, string | null>>({});
   const autoRanQ = useRef<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
@@ -44,6 +48,7 @@ function WorkPage() {
   const roles = boot.data?.principals.find((p) => p.id === principalId)?.roles ?? ["analyst"];
   const actor = boot.data?.principals.find((p) => p.id === principalId);
   const covering = overview.data?.coveringGrants ?? [];
+  const incoming = overview.data?.inbox?.handoffs ?? [];
   const liveRead = covering.find((g) => g.continuesReads);
   const books = featuredPlaybooks(roles, WORK_STARTERS).map((b) =>
     b.id === "northstar" && liveRead
@@ -57,8 +62,7 @@ function WorkPage() {
     mutationFn: (input: { message: string; as: string }) =>
       submitWorkFn({ data: { principalId: input.as, message: input.message } }),
     onSuccess: (res, vars) => {
-      setThreads((t) => ({ ...t, [vars.as]: [...(t[vars.as] ?? []), res] }));
-      setSelectedId((s) => ({ ...s, [vars.as]: res.taskId }));
+      pushResult(vars.as, res);
       setDraft("");
       void qc.invalidateQueries();
     },
@@ -67,10 +71,12 @@ function WorkPage() {
 
   useEffect(() => {
     if (!q?.trim()) return;
-    if (autoRanQ.current === q) return;
+    if (autoRanQ.current === q || hasConsumedQ(q)) return;
     autoRanQ.current = q;
+    markConsumedQ(q);
     setDraft(q);
     mut.mutate({ message: q, as: principalId });
+    void navigate({ to: "/work", search: {}, replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- auto-run once per q, never on principal switch
   }, [q]);
 
@@ -139,6 +145,40 @@ function WorkPage() {
               Named grant live · {covering[0].tool} / {covering[0].task}. Selected workflow only.
             </p>
           ) : null}
+          {incoming.length ? (
+            <div className="mt-3 space-y-2">
+              {incoming.map((h) => (
+                <button
+                  key={h.id}
+                  type="button"
+                  onClick={() => {
+                    void openHandoffFn({ data: { actorId: principalId, handoffId: h.id } }).then(() => {
+                      void qc.invalidateQueries();
+                      const path = h.href.split("?")[0] || "/";
+                      if (path === "/approvals") {
+                        void navigate({ to: "/approvals" });
+                        return;
+                      }
+                      if (path === "/policies") {
+                        void navigate({ to: "/policies" });
+                        return;
+                      }
+                      if (path === "/") {
+                        void navigate({ to: "/" });
+                        return;
+                      }
+                      void navigate({ to: "/work" });
+                    });
+                  }}
+                  className="w-full rounded-[var(--radius-md)] border border-border-strong bg-surface-2 px-3 py-2 text-left"
+                >
+                  <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">From {h.fromName}</div>
+                  <div className="mt-1 text-sm text-fg">{h.label}</div>
+                  <p className="mt-1 text-xs text-muted">{h.hint}</p>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 md:px-8">
           {thread.length === 0 ? (
@@ -179,11 +219,11 @@ function WorkPage() {
               <div
                 role="button"
                 tabIndex={0}
-                onClick={() => setSelectedId((s) => ({ ...s, [principalId]: item.taskId }))}
+                onClick={() => selectResult(principalId, item.taskId)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    setSelectedId((s) => ({ ...s, [principalId]: item.taskId }));
+                    selectResult(principalId, item.taskId);
                   }
                 }}
                 className={cn(

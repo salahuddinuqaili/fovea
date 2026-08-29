@@ -119,7 +119,7 @@ export function executeApprovedAction(
   if (kind !== "sandbox_write") {
     approval.executionStatus = "disabled_prod";
     approval.executionNote =
-      "Approval is bound to the exact action hash. Production and backfill execution remain disabled in v1. Stage C sandbox writes are the only executable path.";
+      "Approval is bound to the exact action hash. Production and backfill execution remain disabled in this release. Stage C sandbox writes are the only executable path.";
     return {
       approval,
       execution: "disabled_prod",

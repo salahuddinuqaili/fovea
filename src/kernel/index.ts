@@ -11,6 +11,7 @@ import { getStore, resetStore, type KernelStore } from "./store.ts";
 import { runEvalSuite } from "./evals.ts";
 import { runOperatorSimulations } from "./simulations.ts";
 import { issueGrant, revokeGrant, findGrant, isGrantActive, coveringGrants, grantContinuesReads } from "./grants.ts";
+import { incomingHandoffs, isHandoffOpen, makeHandoff } from "./handoffs.ts";
 import { runtimeVerify } from "./kms.ts";
 import { listWarehouseProfiles } from "./warehouse.ts";
 import type { AutonomyGrant, KillSwitchState, SkillManifest } from "./types.ts";
@@ -67,12 +68,43 @@ export function getOverview(principalId: string) {
   const p = store.principal(principalId);
   const mine = store.state.tasks.filter((t) => t.principalId === principalId);
   const session = store.state.sessions.find((s) => s.humanPrincipalId === principalId);
+  const canAudit =
+    Boolean(p?.actions.includes("audit.read")) ||
+    Boolean(p?.roles.includes("auditor")) ||
+    Boolean(p?.roles.includes("security_owner")) ||
+    Boolean(p?.roles.includes("os_owner"));
+  const canApprove = Boolean(p?.roles.includes("approver"));
+  const pending = store.state.approvals.filter((a) => a.decision === "pending");
+  const handoffs = incomingHandoffs(store.state.handoffs ?? [], principalId).map((h) => ({
+    id: h.id,
+    fromName: store.principal(h.fromPrincipalId)?.displayName ?? h.fromPrincipalId,
+    kind: h.kind,
+    label: h.label,
+    href: h.href,
+    hint: h.hint,
+    expiresAt: h.expiresAt,
+  }));
   return {
     principal: p,
     tasks: mine.slice(0, 12),
     allTaskCount: store.state.tasks.length,
-    pendingApprovals: store.state.approvals.filter((a) => a.decision === "pending"),
-    recentEvents: store.state.events.slice(0, 18),
+    pendingApprovals: pending,
+    inbox: {
+      auditScope: canAudit ? ("org" as const) : ("desk" as const),
+      handoffs,
+      pendingForDesk: canApprove
+        ? pending.map((a) => ({
+            approvalId: a.approvalId,
+            requestedByName: store.principal(a.requestedBy)?.displayName ?? a.requestedBy,
+            actionSummary: a.actionSummary,
+            hash: a.proposedActionHash,
+            estimatedCost: a.estimatedCost,
+          }))
+        : [],
+    },
+    recentEvents: canAudit
+      ? store.state.events.slice(0, 18)
+      : store.state.events.filter((e) => e.principalId === principalId).slice(0, 18),
     spentUsd: session?.spentUsd ?? 0,
     budgetUsd: session?.costBudgetUsd ?? 25,
     budgetRemainingUsd: Math.max(0, (session?.costBudgetUsd ?? 25) - (session?.spentUsd ?? 0)),
@@ -102,6 +134,28 @@ export async function submitWork(principalId: string, message: string, skillId?:
   return runWork(getStore(), { principalId, message, skillId });
 }
 
+export function openHandoff(actorId: string, handoffId: string) {
+  const store = getStore();
+  const found = store.state.handoffs.find((h) => h.id === handoffId);
+  if (!found) return { ok: false as const, error: "Unknown handoff." };
+  if (found.toPrincipalId !== actorId) {
+    return { ok: false as const, error: "This handoff is not for this desk." };
+  }
+  if (!isHandoffOpen(found)) return { ok: true as const, handoff: found };
+  found.openedAt = new Date().toISOString();
+  store.applyHandoff(found);
+  store.emit({
+    taskId: found.taskId,
+    sessionId: null,
+    principalId: actorId,
+    eventType: "handoff.opened",
+    resourceIds: [found.id, found.toPrincipalId],
+    correlationId: found.id,
+    summary: `Opened handoff ${found.id} on this desk.`,
+  });
+  return { ok: true as const, handoff: found };
+}
+
 export function listTasks(principalId?: string) {
   const store = getStore();
   return principalId ? store.state.tasks.filter((t) => t.principalId === principalId) : store.state.tasks;
@@ -112,7 +166,10 @@ export function getTask(id: string) {
 }
 
 export function listApprovals() {
-  return getStore().state.approvals;
+  const all = getStore().state.approvals;
+  const pending = all.filter((a) => a.decision === "pending");
+  const rest = all.filter((a) => a.decision !== "pending");
+  return [...pending, ...rest];
 }
 
 export function resolveApproval(approvalId: string, actorId: string, decision: "approved" | "denied") {
@@ -125,7 +182,12 @@ export function executeApproved(approvalId: string, actorId: string) {
 
 export function listAudit(actorId: string) {
   const p = getStore().principal(actorId);
-  if (!p?.actions.includes("audit.read") && !p?.roles.includes("auditor") && !p?.roles.includes("security_owner")) {
+  if (
+    !p?.actions.includes("audit.read") &&
+    !p?.roles.includes("auditor") &&
+    !p?.roles.includes("security_owner") &&
+    !p?.roles.includes("os_owner")
+  ) {
     return { ok: false as const, error: "Audit view requires auditor or security role." };
   }
   return { ok: true as const, events: getStore().state.events.slice(0, 200) };
@@ -173,7 +235,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("8.0.0");
+  return runEvalSuite("9.0.0");
 }
 
 export async function runSimulations() {
@@ -242,6 +304,7 @@ export function health() {
     release: store.state.loadedRelease,
     verification: store.state.loadedRelease ? verifyRelease(store.state.loadedRelease) : null,
     pendingApprovals: store.state.approvals.filter((a) => a.decision === "pending").length,
+    openHandoffs: (store.state.handoffs ?? []).filter((h) => isHandoffOpen(h)).length,
     eventCount: store.state.events.length,
     sandboxWrites: store.state.sandbox.writes.length,
     credentials: store.state.credentials.length,
@@ -278,6 +341,19 @@ export function putGrant(
   const issued = issueGrant(actor, input, store.state.grants);
   if (!issued.ok) return issued;
   store.addGrant(issued.grant);
+  if (issued.grant.principalId !== actorId) {
+    const who = store.principal(issued.grant.principalId);
+    store.addHandoff(
+      makeHandoff({
+        fromPrincipalId: actorId,
+        toPrincipalId: issued.grant.principalId,
+        kind: "work",
+        label: `Open ${who?.displayName.split(" ")[0] ?? "grantee"}’s work`,
+        href: "/work",
+        hint: `Named grant ${issued.grant.tool} / ${issued.grant.task} is on this desk. It does not run as the issuer.`,
+      }),
+    );
+  }
   store.emit({
     taskId: null,
     sessionId: null,
@@ -313,5 +389,5 @@ export function retractGrant(
   return retracted;
 }
 
-export { AGENT_RELEASE, KERNEL_VERSION, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant, coveringGrants, grantContinuesReads };
+export { AGENT_RELEASE, KERNEL_VERSION, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant, coveringGrants, grantContinuesReads, incomingHandoffs };
 export type { KernelStore };

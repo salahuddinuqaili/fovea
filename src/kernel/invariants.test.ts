@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("8.0.0");
+    const report = await runEvalSuite("9.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,9 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all thirteen journeys pass", async () => {
+  it("all fourteen journeys pass", async () => {
     const report = await runOperatorSimulations();
-    assert.equal(report.simulations.length, 13);
+    assert.equal(report.simulations.length, 14);
     assert.equal(
       report.passed,
       true,
@@ -469,7 +469,7 @@ describe("v8 honest control plane", () => {
   it("classifies please-grant, blocks pending execute, and keeps live off the OS allowlist", async () => {
     const { executeApprovedAction } = await import("./credentials.ts");
     const { KERNEL_VERSION } = await import("./types.ts");
-    assert.equal(KERNEL_VERSION, "8.0.0");
+    assert.equal(KERNEL_VERSION, "9.0.0");
     assert.equal(
       classifyIntent("Please grant Maya warehouse.query for investigate-metric."),
       "grant_issue",
@@ -488,5 +488,51 @@ describe("v8 honest control plane", () => {
     });
     assert.equal(exec.execution, "denied");
     assert.equal(typeof store.applyGrant, "function");
+  });
+});
+
+describe("v9 this-session console", () => {
+  it("creates a named handoff to Jordan and does not queue a denied write", async () => {
+    const { incomingHandoffs } = await import("./handoffs.ts");
+    const { decideApproval } = await import("./orchestrator.ts");
+    const store = new KernelStore();
+    const insert =
+      "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'v9')";
+    const propose = await runWork(store, { principalId: "prin_maya", message: insert });
+    assert.equal(propose.status, "needs_approval");
+    assert.equal(propose.nextAction?.asPrincipalId, "prin_jordan");
+    assert.equal(propose.behaviors.includes("handoff_created"), true);
+    assert.equal(incomingHandoffs(store.state.handoffs, "prin_jordan").length >= 1, true);
+    let alexBlocked = false;
+    try {
+      decideApproval(store, {
+        approvalId: propose.approvals[0].approvalId,
+        actorId: "prin_alex",
+        decision: "approved",
+      });
+    } catch {
+      alexBlocked = true;
+    }
+    assert.equal(alexBlocked, true);
+    store.state.kill.writePlane = true;
+    const before = store.state.approvals.length;
+    const denied = await runWork(store, { principalId: "prin_maya", message: insert });
+    assert.equal(denied.status, "refused");
+    assert.equal(denied.behaviors.includes("no_approval_queued"), true);
+    assert.equal(store.state.approvals.length, before);
+  });
+
+  it("persists handoffs through the durable slice", async () => {
+    const { durableSlice, applyDurableSlice } = await import("./durable.ts");
+    const store = new KernelStore();
+    await runWork(store, {
+      principalId: "prin_maya",
+      message:
+        "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'slice')",
+    });
+    const slice = durableSlice(store.state);
+    assert.ok((slice.handoffs?.length ?? 0) >= 1);
+    const restored = applyDurableSlice(store.state, slice);
+    assert.ok(restored.handoffs.length >= 1);
   });
 });

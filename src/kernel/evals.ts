@@ -998,9 +998,66 @@ const CASES: CaseDef[] = [
       };
     },
   },
+  {
+    id: "operator_inbox_038",
+    category: "operator",
+    severity: "critical",
+    run: async (store) => {
+      const { incomingHandoffs } = await import("./handoffs.ts");
+      const insert =
+        "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'inbox')";
+      const propose = await runWork(store, { principalId: "prin_maya", message: insert });
+      const toJordan = incomingHandoffs(store.state.handoffs, "prin_jordan");
+      let alexBlocked = false;
+      try {
+        decideApproval(store, {
+          approvalId: propose.approvals[0].approvalId,
+          actorId: "prin_alex",
+          decision: "approved",
+        });
+      } catch {
+        alexBlocked = true;
+      }
+      const jordanWrite = await runWork(store, { principalId: "prin_jordan", message: insert });
+      let selfBlocked = false;
+      try {
+        decideApproval(store, {
+          approvalId: jordanWrite.approvals[0].approvalId,
+          actorId: "prin_jordan",
+          decision: "approved",
+        });
+      } catch {
+        selfBlocked = true;
+      }
+      const issued = await runWork(store, {
+        principalId: "prin_alex",
+        message: "Grant Maya warehouse.query for investigate-metric.",
+      });
+      const toMaya = incomingHandoffs(store.state.handoffs, "prin_maya");
+      const beforeDenied = store.state.approvals.length;
+      store.state.kill.writePlane = true;
+      const denied = await runWork(store, { principalId: "prin_maya", message: insert });
+      const mayaEvents = store.state.events.filter((e) => e.principalId === "prin_maya");
+      return {
+        behaviors: propose.behaviors,
+        pass: {
+          proposed: propose.status === "needs_approval",
+          handoff_created: propose.behaviors.includes("handoff_created"),
+          as_jordan: propose.nextAction?.asPrincipalId === "prin_jordan",
+          jordan_inbox: toJordan.length >= 1 && toJordan[0].kind === "approval",
+          alex_not_approver: alexBlocked,
+          requester_cannot_self: selfBlocked,
+          grant_handoff: issued.status === "completed" && toMaya.some((h) => h.kind === "work"),
+          denied_refused: denied.status === "refused",
+          no_queue: denied.behaviors.includes("no_approval_queued") && store.state.approvals.length === beforeDenied,
+          desk_events: mayaEvents.length > 0 && mayaEvents.every((e) => e.principalId === "prin_maya"),
+        },
+      };
+    },
+  },
 ];
 
-export async function runEvalSuite(version = "8.0.0"): Promise<EvalReport> {
+export async function runEvalSuite(version = "9.0.0"): Promise<EvalReport> {
   const cases: EvalCaseResult[] = [];
   for (const def of CASES) {
     const store = new KernelStore();
@@ -1070,6 +1127,7 @@ export async function runEvalSuite(version = "8.0.0"): Promise<EvalReport> {
     grant_chain_without_grant: cases.some((c) => c.id === "grant_chain_without_grant_035" && !c.passed) ? 1 : 0,
     grant_desk_visible: cases.some((c) => c.id === "grant_desk_visible_036" && !c.passed) ? 1 : 0,
     control_plane_integrity: cases.some((c) => c.id === "control_plane_integrity_037" && !c.passed) ? 1 : 0,
+    operator_inbox: cases.some((c) => c.id === "operator_inbox_038" && !c.passed) ? 1 : 0,
   };
   const hardGatesPassed = Object.values(hardGates).every((n) => n === 0);
   const passRate = cases.filter((c) => c.passed).length / cases.length;

@@ -16,7 +16,7 @@ function ApprovalsPage() {
   const boot = useQuery({ queryKey: ["bootstrap"], queryFn: () => bootstrapFn() });
   const q = useQuery({ queryKey: ["approvals"], queryFn: () => listApprovalsFn() });
   const actor = boot.data?.principals.find((p) => p.id === actorId);
-  const canDecide = Boolean(actor?.roles.includes("approver") || actor?.roles.includes("os_owner"));
+  const canDecide = Boolean(actor?.roles.includes("approver"));
   const names = new Map((boot.data?.principals ?? []).map((p) => [p.id, p.displayName]));
   const mut = useMutation({
     mutationFn: (d: { approvalId: string; decision: "approved" | "denied" }) =>
@@ -41,7 +41,7 @@ function ApprovalsPage() {
       <PageHeader
         kicker="Operate"
         title="Approvals"
-        description="Approvals bind to an exact action hash. Switch to Jordan Hale to decide. A pending approval cannot mint a credential. Production stays disabled."
+        description="Approvals bind to an exact action hash. Only an approver who is not the requester can decide. Switch to Jordan Hale. Production stays disabled."
       />
       <div className="space-y-3 p-4 md:p-8">
         {(q.data ?? []).length === 0 ? (
@@ -69,7 +69,7 @@ function ApprovalsPage() {
                 </Badge>
               </div>
               {a.decision === "pending" ? (
-                canDecide ? (
+                canDecide && a.requestedBy !== actorId ? (
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Button size="sm" onClick={() => mut.mutate({ approvalId: a.approvalId, decision: "approved" })}>
                       Approve
@@ -84,8 +84,9 @@ function ApprovalsPage() {
                   </div>
                 ) : (
                   <p className="mt-4 text-xs text-muted">
-                    Acting as {actor?.displayName ?? actorId}. Switch to Jordan Hale (approver) to decide this hash.
-                    Analysts cannot mint write credentials.
+                    {a.requestedBy === actorId
+                      ? "You requested this write. Separation of duties — switch to Jordan Hale to decide the hash."
+                      : `Acting as ${actor?.displayName ?? actorId}. Switch to Jordan Hale (approver) to decide this hash. OS owners are not hidden super-approvers.`}
                   </p>
                 )
               ) : (

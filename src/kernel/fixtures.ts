@@ -713,7 +713,7 @@ export const ENTERPRISE_SKILLS: SkillManifest[] = [
     version: "1.0.0",
     scope: "enterprise",
     owner: "org",
-    description: "Generate a governed backfill plan. Production execution stays disabled in v1.",
+    description: "Generate a governed backfill plan. Production execution stays disabled in this release.",
     allowedTools: ["pipeline.graph", "pipeline.dry_run", "observability.read", "warehouse.dry_run"],
     requestedPermissions: ["read", "plan", "propose_write"],
     dataClasses: ["internal", "confidential"],

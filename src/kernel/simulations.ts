@@ -2,6 +2,7 @@ import { decideApproval, runWork } from "./orchestrator.ts";
 import { unsigned, verifyRelease, buildRelease, SEED_TREE } from "./release.ts";
 import { KernelStore } from "./store.ts";
 import { coveringGrants, grantContinuesReads, isGrantActive, matchingGrant, shadowStageD } from "./grants.ts";
+import { incomingHandoffs } from "./handoffs.ts";
 
 export interface SimulationStep {
   name: string;
@@ -99,6 +100,8 @@ async function sandboxWriteLoop(store: KernelStore): Promise<Omit<SimulationResu
     step("proposal_pending", proposedStatus === "needs_approval", proposedStatus),
     step("hash_bound", Boolean(proposedHash), proposedHash),
     step("next_is_approvals", nextHref === "/approvals", nextHref),
+    step("as_jordan", propose.nextAction?.asPrincipalId === "prin_jordan", propose.nextAction?.asPrincipalId ?? "none"),
+    step("handoff_created", propose.behaviors.includes("handoff_created"), "ok"),
     step("analyst_cannot_approve", mayaBlocked, mayaBlocked ? "blocked" : "leaked"),
     step("sandbox_executed", approved.execution === "sandbox_executed", approved.execution),
     step("idempotent_replay", replay.execution === "sandbox_replayed" && rows.length === 1, `${replay.execution}:${rows.length}`),
@@ -544,6 +547,70 @@ async function controlIntegrity(store: KernelStore): Promise<Omit<SimulationResu
   };
 }
 
+async function operatorInbox(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const insert =
+    "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'desk')";
+  const propose = await runWork(store, { principalId: "prin_maya", message: insert });
+  const jordanHandoffs = incomingHandoffs(store.state.handoffs, "prin_jordan");
+  let alexBlocked = false;
+  try {
+    decideApproval(store, {
+      approvalId: propose.approvals[0].approvalId,
+      actorId: "prin_alex",
+      decision: "approved",
+    });
+  } catch {
+    alexBlocked = true;
+  }
+  const jordanWrite = await runWork(store, { principalId: "prin_jordan", message: insert });
+  let selfBlocked = false;
+  try {
+    decideApproval(store, {
+      approvalId: jordanWrite.approvals[0].approvalId,
+      actorId: "prin_jordan",
+      decision: "approved",
+    });
+  } catch {
+    selfBlocked = true;
+  }
+  const issued = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Grant Maya warehouse.query for investigate-metric.",
+  });
+  const mayaHandoffs = incomingHandoffs(store.state.handoffs, "prin_maya");
+  const beforeDenied = store.state.approvals.length;
+  store.state.kill.writePlane = true;
+  const denied = await runWork(store, { principalId: "prin_maya", message: insert });
+  const rileyAudit = listAuditFor(store, "prin_riley");
+  const mayaAudit = listAuditFor(store, "prin_maya");
+  const mayaOwn = store.state.events.filter((e) => e.principalId === "prin_maya");
+  const foreignOnMayaDesk = store.state.events.some((e) => e.principalId !== "prin_maya");
+  const steps = [
+    step("maya_handoff", propose.behaviors.includes("handoff_created"), propose.status),
+    step("jordan_queue", jordanHandoffs.some((h) => h.kind === "approval"), String(jordanHandoffs.length)),
+    step("as_principal", propose.nextAction?.asPrincipalId === "prin_jordan", propose.nextAction?.asPrincipalId ?? "none"),
+    step("alex_not_approver", alexBlocked, alexBlocked ? "blocked" : "leaked"),
+    step("no_self_approve", selfBlocked, selfBlocked ? "blocked" : "leaked"),
+    step("grant_handoff", issued.status === "completed" && mayaHandoffs.some((h) => h.kind === "work"), issued.status),
+    step("denied_not_queued", denied.status === "refused" && denied.behaviors.includes("no_approval_queued"), denied.status),
+    step("queue_unchanged", store.state.approvals.length === beforeDenied, String(store.state.approvals.length)),
+    step("riley_reads_audit", rileyAudit.ok, rileyAudit.ok ? "ok" : rileyAudit.error),
+    step("maya_denied_audit", mayaAudit.ok === false, mayaAudit.ok ? "leaked" : "denied"),
+    step("maya_has_own_events", mayaOwn.length > 0, String(mayaOwn.length)),
+    step("foreign_events_exist", foreignOnMayaDesk, "ok"),
+  ];
+  return {
+    id: "sim_operator_inbox",
+    title: "This-session console and named desks",
+    persona: "Maya Chen → Jordan Hale → Alex Voss → Riley Park",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: steps.every((s) => s.passed)
+      ? []
+      : ["Inbox, separation of duties, or denied-write queue did not stay honest."],
+  };
+}
+
 const RUNNERS = [
   analystMorning,
   sandboxWriteLoop,
@@ -558,6 +625,7 @@ const RUNNERS = [
   grantContinuation,
   grantDeskVisible,
   controlIntegrity,
+  operatorInbox,
 ];
 
 export async function runOperatorSimulations(): Promise<{

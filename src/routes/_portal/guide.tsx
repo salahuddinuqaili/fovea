@@ -18,6 +18,8 @@ function GuidePage() {
           <p className="mt-3 text-sm leading-relaxed text-muted">
             Fovea is a control plane, not a chatbot. Named metrics come back with a query and a provenance record.
             Vague questions are refused. Writes need an exact-hash approval. Production never runs from this demo.
+            Work is this session — leave and come back, the thread is still here. Command is this desk: Jordan sees a
+            queue, Maya sees her own events.
           </p>
         </section>
 
@@ -50,7 +52,8 @@ function GuidePage() {
           <ul className="mt-3 space-y-2 text-sm text-muted">
             <li>“How is revenue doing?” — more than one definition. Name the metric.</li>
             <li>Prompt injection, README instructions, ticket text — data, not policy.</li>
-            <li>Maya cannot approve her own write. Jordan can, bound to the hash.</li>
+            <li>Maya cannot approve her own write. Jordan can, bound to the hash. Alex (OS owner) is not a hidden super-approver.</li>
+            <li>A denied write is refused. It is not queued for Jordan to clean up.</li>
             <li>Production tables and backfill execution stay disabled.</li>
             <li>“Enable autonomous mode” — there is no global switch. Grants are per-tool, per-task, per-risk.</li>
             <li>Maya cannot issue a grant. Switch to Alex Voss or Sam Okonkwo. Duplicates are refused. Revoke ends coverage. After a grant, Work shows it on Maya’s desk before she asks. Alex’s Command lists the same grant. Sibling reads continue. The next action opens Maya’s desk — it does not run as Alex. The grant never promotes Stage D.</li>
