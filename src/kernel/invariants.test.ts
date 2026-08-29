@@ -602,6 +602,7 @@ describe("v11 desk stays put", () => {
     assert.equal(issued.status, "completed");
     const maya = incomingHandoffs(store.state.handoffs, "prin_maya");
     assert.equal(maya.some((h) => h.label === "Named grant from Alex"), true);
+    assert.equal(maya.some((h) => /Switch the header to Maya/i.test(h.hint)), false);
     assert.equal(coveringGrants(store.state.grants, "prin_maya").length, 1);
   });
 });

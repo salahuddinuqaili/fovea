@@ -692,6 +692,7 @@ async function deskStaysPut(store: KernelStore): Promise<Omit<SimulationResult, 
   const steps = [
     step("write_from_maya", jordanHandoffs.some((h) => h.label === "Write from Maya"), jordanHandoffs[0]?.label ?? "none"),
     step("named_grant_from_alex", mayaHandoffs.some((h) => h.label === "Named grant from Alex"), mayaHandoffs.map((h) => h.label).join(",") || "none"),
+    step("hint_faces_maya", mayaHandoffs.some((h) => h.label === "Named grant from Alex" && !/Switch the header to Maya/i.test(h.hint)), mayaHandoffs.find((h) => h.label === "Named grant from Alex")?.hint ?? "none"),
     step("covering_still_there", covering.length === 1, String(covering.length)),
     step("handoff_and_cover", mayaHandoffs.length >= 1 && covering.length === 1, "ok"),
     step("maya_home", home(["analyst"]) === "analyst", "analyst"),

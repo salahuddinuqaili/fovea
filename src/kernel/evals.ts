@@ -1135,6 +1135,7 @@ const CASES: CaseDef[] = [
         pass: {
           write_label: toJordan.some((h) => h.kind === "approval" && h.label === "Write from Maya"),
           grant_label: toMaya.some((h) => h.kind === "work" && h.label === "Named grant from Alex"),
+          grant_hint: toMaya.some((h) => h.label === "Named grant from Alex" && !/Switch the header to Maya/i.test(h.hint)),
           grant_stored: issued.status === "completed" && covering.length === 1,
           covering_and_handoff: covering.length === 1 && toMaya.length >= 1,
           issuer_next: issued.nextAction?.asPrincipalId === "prin_maya",

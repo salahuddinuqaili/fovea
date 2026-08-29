@@ -1132,6 +1132,7 @@ function recordHandoffs(store: KernelStore, result: WorkResult) {
       ? "policy"
       : "work";
   const grantish = result.behaviors.includes("grant_issued");
+  const hashBit = na.hint.match(/Bound hash [0-9a-f]+…/i)?.[0];
   store.addHandoff(
     makeHandoff({
       fromPrincipalId: result.principalId,
@@ -1146,7 +1147,12 @@ function recordHandoffs(store: KernelStore, result: WorkResult) {
               ? `Named grant from ${first}`
               : `From ${fromName}`,
       href: na.href,
-      hint: na.hint,
+      hint:
+        kind === "approval"
+          ? `${hashBit ? `${hashBit} ` : ""}Exact hash on Approvals. You cannot approve a write you requested.`
+          : grantish
+            ? "This named grant is on this desk. It does not run as the issuer."
+            : na.hint,
       taskId: result.taskId,
     }),
   );
