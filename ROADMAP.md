@@ -42,12 +42,19 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - Live warehouse adapter registered and policy-gated. Writes stay disabled. No DSN in the demo.
 - Eight operator simulations as a release input.
 
-## v4 — Grant desk (this tree)
+## v4 — Grant desk
 
 - Named Stage D grants from Policy and Work. Alex can issue; Maya cannot.
 - Wildcards, writes, and tier 4 stay denied. A grant never self-promotes.
 - Command featured playbooks (Autonomy / Live no longer sliced away). Work starters, pre-wrapped briefs, evidence download.
 - Nine operator simulations as a release input.
+
+## v5 — Grant lifecycle (this tree)
+
+- Active grants cover the matching named workflow (read-only). They do not widen policy and do not promote Stage D.
+- Duplicate active grants are refused. Owners can revoke. Grants expire in eight hours.
+- Work console is this session; durable history stays on Tasks.
+- Ten operator simulations as a release input.
 
 ## Later — Accounts and a real warehouse DSN
 

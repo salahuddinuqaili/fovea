@@ -43,7 +43,11 @@ function HealthPage() {
           v={liveConnected ? "Connected" : "Gated"}
           tone={!liveWritesOff ? "danger" : liveConnected ? "ok" : "warn"}
         />
-        <Card k="Selected grants" v={String(h?.grants?.length ?? 0)} tone="ok" />
+        <Card
+          k="Active grants"
+          v={String(h?.activeGrants ?? 0)}
+          tone="ok"
+        />
       </div>
       <div className="flex flex-wrap gap-2 px-4 md:px-8">
         <Button variant="secondary" onClick={() => mut.mutate({ writePlane: true })}>

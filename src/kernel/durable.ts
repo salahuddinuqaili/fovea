@@ -86,7 +86,15 @@ export function applyDurableSlice(state: KernelState, slice: DurableSlice): Kern
     loadError: slice.loadError ?? null,
     credentials: slice.credentials ?? [],
     sandbox: slice.sandbox ?? seedSandbox(),
-    grants: slice.grants ?? [],
+    grants: (slice.grants ?? []).map(normalizeGrant),
+  };
+}
+
+function normalizeGrant(g: AutonomyGrant): AutonomyGrant {
+  return {
+    ...g,
+    revokedAt: g.revokedAt ?? null,
+    revokedBy: g.revokedBy ?? null,
   };
 }
 

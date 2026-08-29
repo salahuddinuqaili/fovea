@@ -133,6 +133,13 @@ export const PLAYBOOKS: Playbook[] = [
     roles: ["os_owner", "security_owner"],
   },
   {
+    id: "revoke",
+    kicker: "Revoke",
+    q: "Revoke Maya warehouse.query for investigate-metric.",
+    why: "Owners can retract a named grant. Coverage ends immediately.",
+    roles: ["os_owner", "security_owner"],
+  },
+  {
     id: "close",
     kicker: "Session",
     q: "Close the session.",
@@ -157,6 +164,7 @@ export const COMMAND_FEATURED = [
   "inject",
   "backfill",
   "grant",
+  "revoke",
 ] as const;
 
 /** Work empty-state starters. Six cards, not the full INSERT dump. */
@@ -164,7 +172,6 @@ export const WORK_STARTERS = [
   "northstar",
   "incident",
   "abstain",
-  "sandbox",
   "autonomy",
   "live",
   "grant",

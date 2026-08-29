@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("4.0.0");
+    const report = await runEvalSuite("5.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,9 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all nine journeys pass", async () => {
+  it("all ten journeys pass", async () => {
     const report = await runOperatorSimulations();
-    assert.equal(report.simulations.length, 9);
+    assert.equal(report.simulations.length, 10);
     assert.equal(
       report.passed,
       true,
@@ -330,5 +330,43 @@ describe("v4 grant desk", () => {
       message: "Connect the live warehouse.",
     });
     assert.equal(live.status, "refused");
+  });
+});
+
+describe("v5 grant lifecycle", () => {
+  it("covers Maya's metric, denies duplicates, revokes, and never promotes", async () => {
+    const store = new KernelStore();
+    const issued = await runWork(store, {
+      principalId: "prin_alex",
+      message: "Grant Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(issued.status, "completed");
+    const covered = await runWork(store, {
+      principalId: "prin_maya",
+      message: "What was north-star revenue last week?",
+    });
+    assert.equal(covered.behaviors.includes("grant_covers"), true);
+    const dup = await runWork(store, {
+      principalId: "prin_alex",
+      message: "Grant Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(dup.status, "refused");
+    const asMaya = await runWork(store, {
+      principalId: "prin_maya",
+      message: "Revoke Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(asMaya.status, "refused");
+    const revoked = await runWork(store, {
+      principalId: "prin_alex",
+      message: "Revoke Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(revoked.behaviors.includes("grant_revoked"), true);
+    const after = await runWork(store, {
+      principalId: "prin_maya",
+      message: "What was north-star revenue last week?",
+    });
+    assert.equal(after.behaviors.includes("grant_covers"), false);
+    const { shadowStageD } = await import("./grants.ts");
+    assert.equal(shadowStageD(store.state.grants[0]).promoted, false);
   });
 });

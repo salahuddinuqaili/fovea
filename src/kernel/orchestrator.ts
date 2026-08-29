@@ -10,7 +10,7 @@ import { KernelStore, makePersonalNote } from "./store.ts";
 import { dryRunSql, executeReadSql, lintSql, readRepo, readTicket, wrapToolCall } from "./tools.ts";
 import { validateSandboxWriteSql } from "./sql.ts";
 import { connectLiveWarehouse } from "./warehouse.ts";
-import { issueGrant, parseGrantRequest, shadowStageD } from "./grants.ts";
+import { findGrant, issueGrant, matchingGrant, parseGrantRequest, parseRevokeRequest, revokeGrant, shadowStageD } from "./grants.ts";
 import type {
   Approval,
   NextAction,
@@ -44,6 +44,7 @@ export type Intent =
   | "autonomy_switch"
   | "live_warehouse"
   | "grant_issue"
+  | "grant_revoke"
   | "general";
 
 export function classifyIntent(text: string): Intent {
@@ -60,6 +61,7 @@ export function classifyIntent(text: string): Intent {
   if (/another user'?s memory|maya'?s (private|personal) (notes|memory)|cross-user/i.test(t)) return "memory_probe";
   if (/connect (the )?(live|production) warehouse|query (the )?live warehouse|arm live (warehouse|dsn)/i.test(t))
     return "live_warehouse";
+  if (/^revoke\s+/i.test(t)) return "grant_revoke";
   if (/^grant\s+/i.test(t)) return "grant_issue";
   if (/backfill|rerun (the )?(last|past|affected)|reprocess partition/i.test(t)) return "backfill";
   if ((WRITE_ASK.test(t) || /\bwrite .{0,60}sandbox\./i.test(t)) && /\bsandbox\./i.test(t)) return "sandbox_write";
@@ -171,6 +173,7 @@ export async function runWork(
   behaviors.push(`intent:${intent}`);
 
   const finish = (partial: Partial<WorkResult> & Pick<WorkResult, "status">): WorkResult => {
+    applyGrantCoverage(store, principal.id, intent, partial, behaviors);
     const result: WorkResult = {
       taskId,
       sessionId: session.sessionId,
@@ -388,6 +391,10 @@ export async function runWork(
 
   if (intent === "grant_issue") {
     return finish(runGrantIssue(store, principal, input.message, behaviors, policyFor));
+  }
+
+  if (intent === "grant_revoke") {
+    return finish(runGrantRevoke(store, principal, input.message, behaviors, policyFor));
   }
 
   if (intent === "incident") {
@@ -879,7 +886,7 @@ function runGrantIssue(
       },
     };
   }
-  const issued = issueGrant(principal, parsed);
+  const issued = issueGrant(principal, parsed, store.state.grants);
   if (!issued.ok) {
     behaviors.push("grant_denied", "no_global_autonomy", "no_write_executed");
     const owner = principal.roles.includes("os_owner") || principal.roles.includes("security_owner");
@@ -910,12 +917,97 @@ function runGrantIssue(
     status: "completed",
     answer: {
       claimClass: "derived",
-      text: `Named grant ${issued.grant.id} stored: ${issued.grant.tool} / ${issued.grant.task} for ${issued.grant.principalId}, max risk T${issued.grant.maxRisk}, actions ${issued.grant.actions.join(", ")}. Shadow Stage D: eligible=${shadow.eligible}, promoted=${shadow.promoted}. Production execution stays disabled.`,
+      text: `Named grant ${issued.grant.id} stored: ${issued.grant.tool} / ${issued.grant.task} for ${issued.grant.principalId}, max risk T${issued.grant.maxRisk}, actions ${issued.grant.actions.join(", ")}. Expires ${issued.grant.expiresAt}. Shadow Stage D: eligible=${shadow.eligible}, promoted=${shadow.promoted}. Production execution stays disabled.`,
       citations: [
         { label: issued.grant.id, kind: "policy", ref: issued.grant.id },
         { label: issued.grant.tool, kind: "policy", ref: issued.grant.tool },
       ],
     },
+  };
+}
+
+function runGrantRevoke(
+  store: KernelStore,
+  actor: { id: string },
+  message: string,
+  behaviors: string[],
+  policyFor: (p: Partial<PolicyRequest> & Pick<PolicyRequest, "action" | "tool">) => PolicyResponse,
+): Pick<WorkResult, "status" | "answer"> {
+  policyFor({ action: "read", tool: "none", task: "autonomy.grant" });
+  const parsed = parseRevokeRequest(message);
+  const principal = store.principal(actor.id);
+  if (!principal || !parsed) {
+    behaviors.push("grant_denied", "no_write_executed");
+    return {
+      status: "refused",
+      answer: {
+        claimClass: "refusal",
+        text: "Could not parse a revoke. Name the grant — for example: Revoke Maya warehouse.query for investigate-metric.",
+        citations: [{ label: "grant revoke", kind: "policy", ref: "autonomy.grant" }],
+      },
+    };
+  }
+  const found = findGrant(store.state.grants, parsed);
+  const retracted = revokeGrant(principal, found);
+  if (!retracted.ok) {
+    behaviors.push("grant_denied", "no_write_executed");
+    const owner = principal.roles.includes("os_owner") || principal.roles.includes("security_owner");
+    return {
+      status: "refused",
+      answer: {
+        claimClass: "refusal",
+        text: owner
+          ? `Revoke refused. ${retracted.reason}`
+          : `Revoke refused. ${retracted.reason} Switch to Alex Voss or Sam Okonkwo.`,
+        citations: [{ label: "autonomy.grant", kind: "policy", ref: "autonomy.grant" }],
+      },
+    };
+  }
+  store.state.grants = store.state.grants.map((g) => (g.id === retracted.grant.id ? retracted.grant : g));
+  if (!store.state.grants.some((g) => g.id === retracted.grant.id)) store.state.grants.unshift(retracted.grant);
+  store.emit({
+    taskId: null,
+    sessionId: null,
+    principalId: principal.id,
+    eventType: "autonomy.grant.revoked",
+    resourceIds: [retracted.grant.id, retracted.grant.tool, retracted.grant.task],
+    correlationId: retracted.grant.id,
+    summary: `Revoked ${retracted.grant.id}. Stage D was not promoted.`,
+  });
+  behaviors.push("grant_revoked", "no_self_promotion", "no_write_executed");
+  return {
+    status: "completed",
+    answer: {
+      claimClass: "derived",
+      text: `Grant ${retracted.grant.id} revoked. ${retracted.grant.tool} / ${retracted.grant.task} for ${retracted.grant.principalId} is no longer an active selected workflow. Stage D was not promoted.`,
+      citations: [{ label: retracted.grant.id, kind: "policy", ref: retracted.grant.id }],
+    },
+  };
+}
+
+function applyGrantCoverage(
+  store: KernelStore,
+  principalId: string,
+  intent: Intent,
+  partial: Partial<WorkResult> & Pick<WorkResult, "status">,
+  behaviors: string[],
+) {
+  if (partial.status !== "completed") return;
+  if (intent !== "metric" && intent !== "incident" && intent !== "sql") return;
+  const task = skillFor(intent);
+  if (!task) return;
+  const hit = matchingGrant(store.state.grants, {
+    principalId,
+    tool: "warehouse.query",
+    task,
+    action: "read",
+  });
+  if (!hit || !partial.answer) return;
+  behaviors.push("grant_covers", "no_self_promotion");
+  partial.answer = {
+    ...partial.answer,
+    text: `${partial.answer.text}\n\nCovered by named grant ${hit.id} until ${hit.expiresAt}. Selected workflow only. Stage D was not promoted.`,
+    citations: [...partial.answer.citations, { label: hit.id, kind: "policy", ref: hit.id }],
   };
 }
 
@@ -928,6 +1020,7 @@ function titleFor(intent: Intent, message: string) {
   if (intent === "autonomy_switch") return "Autonomy switch refused";
   if (intent === "live_warehouse") return "Live warehouse gated";
   if (intent === "grant_issue") return "Selected workflow grant";
+  if (intent === "grant_revoke") return "Revoke selected grant";
   if (intent === "session_close") return "Session close";
   if (intent === "injection" || intent === "policy_bypass") return "Policy refusal";
   if (intent === "ambiguous_metric") return "Abstention";
@@ -970,11 +1063,14 @@ function nextActionFor(
       hint: "Follow the evidence to a related canonical metric.",
     };
   }
-  if (status === "completed" && intent === "grant_issue") {
+  if (status === "completed" && (intent === "grant_issue" || intent === "grant_revoke")) {
     return {
       label: "Open policy",
       href: "/policies",
-      hint: "Named grant stored. It did not promote Stage D.",
+      hint:
+        intent === "grant_revoke"
+          ? "Grant retracted. It did not promote Stage D."
+          : "Named grant stored. It did not promote Stage D.",
     };
   }
   if (status === "refused") {
@@ -985,8 +1081,8 @@ function nextActionFor(
           ? "/work?q=" + encodeURIComponent("What was north-star revenue last week?")
           : "/policies",
       hint:
-        intent === "grant_issue"
-          ? "Switch the header to Alex Voss to issue a named grant. Wildcards stay denied."
+        intent === "grant_issue" || intent === "grant_revoke"
+          ? "Switch the header to Alex Voss or Sam Okonkwo. Wildcards stay denied. Revoke only an active named grant."
           : intent === "live_warehouse"
             ? "The live adapter stayed dark. Named metrics still run on the fixture."
             : "Policy did not move. There is no global autonomous switch.",

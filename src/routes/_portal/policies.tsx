@@ -5,12 +5,13 @@ import { toast } from "sonner";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { bootstrapFn, putGrantFn } from "@/lib/api";
+import { bootstrapFn, putGrantFn, retractGrantFn } from "@/lib/api";
 import { useFoveaSession } from "@/lib/session";
+import type { AutonomyGrant } from "@/kernel/types";
 
 export const Route = createFileRoute("/_portal/policies")({ component: PoliciesPage });
 
-const BUNDLE = `policy_version: 1.2.0
+const BUNDLE = `policy_version: 1.3.0
 autonomy:
   default_stage: B
   global_switch: false
@@ -18,6 +19,9 @@ autonomy:
     shape: per_tool_per_task_per_risk
     wildcards: deny
     execute_write: deny
+    duplicate_active: deny
+    revoke: os_owner_or_security
+    ttl_hours: 8
     self_promote: false
 principles:
   permission_mode: intersection
@@ -62,6 +66,12 @@ const GRANT_ACTIONS = ["read", "analyze", "plan"] as const;
 const FIELD =
   "h-10 w-full rounded-[var(--radius-sm)] border border-border bg-surface px-3 text-sm text-fg outline-none focus-visible:border-border-strong";
 
+function grantState(g: AutonomyGrant): "active" | "expired" | "revoked" {
+  if (g.revokedAt) return "revoked";
+  if (Date.parse(g.expiresAt) <= Date.now()) return "expired";
+  return "active";
+}
+
 function PoliciesPage() {
   const principalId = useFoveaSession((s) => s.principalId);
   const qc = useQueryClient();
@@ -72,6 +82,8 @@ function PoliciesPage() {
   const kms = boot.data?.kms;
   const actor = boot.data?.principals.find((p) => p.id === principalId);
   const canIssue = Boolean(actor?.roles.includes("os_owner") || actor?.roles.includes("security_owner"));
+  const names = Object.fromEntries((boot.data?.principals ?? []).map((p) => [p.id, p.displayName]));
+  const active = grants.filter((g) => grantState(g) === "active").length;
 
   return (
     <div>
@@ -119,7 +131,7 @@ function PoliciesPage() {
         <section>
           <div className="mb-3 flex items-center gap-3">
             <h2 className="text-sm font-medium">Selected Stage D grants</h2>
-            <Badge tone={grants.length ? "ok" : "neutral"}>{grants.length} named</Badge>
+            <Badge tone={active ? "ok" : "neutral"}>{active} active</Badge>
           </div>
           {canIssue ? (
             <GrantForm
@@ -130,23 +142,27 @@ function PoliciesPage() {
             />
           ) : (
             <p className="mb-4 rounded-[var(--radius-md)] border border-border bg-surface px-4 py-3 text-sm text-muted">
-              Switch the header to <span className="text-fg">Alex Voss</span> (OS owner) to issue a named grant. Maya
-              cannot. Wildcards, writes, and tier 4 stay denied. A grant never promotes itself.
+              Switch the header to <span className="text-fg">Alex Voss</span> (OS owner) or{" "}
+              <span className="text-fg">Sam Okonkwo</span> (security) to issue or revoke a named grant. Maya cannot.
+              Wildcards, writes, duplicates, and tier 4 stay denied. A grant never promotes itself.
             </p>
           )}
           {grants.length === 0 ? (
             <p className="text-sm text-muted">
-              None stored. A grant must name one principal, one tool, one task, and a risk ceiling.
+              None stored. A grant must name one principal, one tool, one task, and a risk ceiling. It expires in eight
+              hours unless revoked.
             </p>
           ) : (
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-2">
               {grants.map((g) => (
-                <li
+                <GrantCard
                   key={g.id}
-                  className="rounded-[var(--radius-md)] border border-border bg-surface px-4 py-3 font-mono text-xs"
-                >
-                  {g.id} · {g.principalId} · {g.tool} · {g.task} · {g.actions.join("+")} · max T{g.maxRisk}
-                </li>
+                  grant={g}
+                  names={names}
+                  canRevoke={canIssue}
+                  actorId={principalId}
+                  onRevoked={() => void qc.invalidateQueries()}
+                />
               ))}
             </ul>
           )}
@@ -157,6 +173,72 @@ function PoliciesPage() {
         </pre>
       </div>
     </div>
+  );
+}
+
+function GrantCard({
+  grant,
+  names,
+  canRevoke,
+  actorId,
+  onRevoked,
+}: {
+  grant: AutonomyGrant;
+  names: Record<string, string>;
+  canRevoke: boolean;
+  actorId: string;
+  onRevoked: () => void;
+}) {
+  const status = grantState(grant);
+  const mut = useMutation({
+    mutationFn: () => retractGrantFn({ data: { actorId, grantId: grant.id } }),
+    onSuccess: (res) => {
+      if (!res.ok) {
+        toast.error(res.reason);
+        return;
+      }
+      toast.success(`Grant ${grant.id} revoked.`);
+      onRevoked();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+  const tone = status === "active" ? "ok" : status === "expired" ? "warn" : "danger";
+  return (
+    <li className="rounded-[var(--radius-md)] border border-border bg-surface px-4 py-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="text-sm text-fg">
+            {names[grant.principalId] ?? grant.principalId}
+            <span className="text-muted"> · {grant.tool} · {grant.task}</span>
+          </div>
+          <div className="mt-1 font-mono text-[11px] text-subtle">
+            {grant.id} · {grant.actions.join("+")} · max T{grant.maxRisk} · issued by{" "}
+            {names[grant.issuedBy] ?? grant.issuedBy}
+          </div>
+          <div className="mt-1 text-[11px] text-muted">
+            {status === "active"
+              ? `Expires ${grant.expiresAt.slice(0, 16).replace("T", " ")} UTC`
+              : status === "expired"
+                ? `Expired ${grant.expiresAt.slice(0, 16).replace("T", " ")} UTC`
+                : `Revoked by ${names[grant.revokedBy ?? ""] ?? grant.revokedBy}`}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge tone={tone}>{status}</Badge>
+          {canRevoke && status === "active" ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={mut.isPending}
+              onClick={() => mut.mutate()}
+            >
+              Revoke
+            </Button>
+          ) : null}
+        </div>
+      </div>
+    </li>
   );
 }
 
@@ -209,8 +291,8 @@ function GrantForm({
       }}
     >
       <p className="text-xs text-muted">
-        Issue a named grant. One person, one tool, one task, risk at most T3. This record does not widen policy and
-        does not turn on Stage D.
+        Issue a named grant. One person, one tool, one task, risk at most T3, eight-hour TTL. Duplicates are denied.
+        This record does not widen policy and does not turn on Stage D.
       </p>
       <div className="mt-3 grid gap-3 md:grid-cols-2">
         <label className="text-xs text-muted">

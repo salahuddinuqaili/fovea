@@ -10,7 +10,7 @@ import { tamper, unsigned, verifyRelease } from "./release.ts";
 import { getStore, resetStore, type KernelStore } from "./store.ts";
 import { runEvalSuite } from "./evals.ts";
 import { runOperatorSimulations } from "./simulations.ts";
-import { issueGrant } from "./grants.ts";
+import { issueGrant, revokeGrant, findGrant, isGrantActive } from "./grants.ts";
 import { runtimeVerify } from "./kms.ts";
 import { listWarehouseProfiles } from "./warehouse.ts";
 import type { AutonomyGrant, KillSwitchState, SkillManifest } from "./types.ts";
@@ -45,6 +45,7 @@ export function bootstrap() {
     warehouses: listWarehouseProfiles(),
     kms: runtimeVerify(),
     grants: store.state.grants,
+    activeGrants: store.state.grants.filter((g) => isGrantActive(g)).length,
     skillCount: store.state.skills.length,
     taskCount: store.state.tasks.length,
     pendingApprovals: store.state.approvals.filter((a) => a.decision === "pending").length,
@@ -154,7 +155,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("4.0.0");
+  return runEvalSuite("5.0.0");
 }
 
 export async function runSimulations() {
@@ -226,6 +227,7 @@ export function health() {
     kms: runtimeVerify(),
     warehouses: listWarehouseProfiles(),
     grants: store.state.grants,
+    activeGrants: store.state.grants.filter((g) => isGrantActive(g)).length,
   };
 }
 
@@ -242,7 +244,7 @@ export function putGrant(
   const store = getStore();
   const actor = store.principal(actorId);
   if (!actor) throw new Error("Unknown principal");
-  const issued = issueGrant(actor, input);
+  const issued = issueGrant(actor, input, store.state.grants);
   if (!issued.ok) return issued;
   store.addGrant(issued.grant);
   store.emit({
@@ -255,6 +257,31 @@ export function putGrant(
     summary: `Selected workflow ${issued.grant.tool}/${issued.grant.task} for ${issued.grant.principalId}. Not promoted.`,
   });
   return issued;
+}
+
+export function retractGrant(
+  actorId: string,
+  selector: { grantId?: string; principalId?: string; tool?: string; task?: string },
+) {
+  const store = getStore();
+  const actor = store.principal(actorId);
+  if (!actor) throw new Error("Unknown principal");
+  const found = findGrant(store.state.grants, selector);
+  const retracted = revokeGrant(actor, found);
+  if (!retracted.ok) return retracted;
+  const i = store.state.grants.findIndex((g) => g.id === retracted.grant.id);
+  if (i >= 0) store.state.grants[i] = retracted.grant;
+  else store.state.grants.unshift(retracted.grant);
+  store.emit({
+    taskId: null,
+    sessionId: null,
+    principalId: actorId,
+    eventType: "autonomy.grant.revoked",
+    resourceIds: [retracted.grant.id, retracted.grant.tool, retracted.grant.task],
+    correlationId: retracted.grant.id,
+    summary: `Revoked ${retracted.grant.id}. Stage D was not promoted.`,
+  });
+  return retracted;
 }
 
 export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant };

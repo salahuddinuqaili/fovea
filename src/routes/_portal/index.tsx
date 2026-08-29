@@ -38,7 +38,7 @@ function CommandCenter() {
         <Stat
           label="Autonomy"
           value="Stage B"
-          hint={`${boot.data?.grants?.length ?? 0} named grants · no global switch`}
+          hint={`${boot.data?.activeGrants ?? 0} active grants · no global switch`}
         />
         <Stat
           label="Release"

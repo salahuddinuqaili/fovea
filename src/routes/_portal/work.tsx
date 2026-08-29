@@ -49,13 +49,6 @@ function WorkPage() {
     autoRan.current = null;
   }, [principalId]);
 
-  useEffect(() => {
-    if (thread.length || !history.data?.length) return;
-    const chronological = [...history.data].reverse();
-    setThread(chronological);
-    setSelected(history.data[0] ?? null);
-  }, [history.data, thread.length]);
-
   const mut = useMutation({
     mutationFn: (message: string) => submitWorkFn({ data: { principalId, message } }),
     onSuccess: (res) => {
@@ -110,8 +103,8 @@ function WorkPage() {
           <div className="text-[11px] uppercase tracking-[0.18em] text-subtle">Work console</div>
           <h1 className="mt-1 font-display text-4xl tracking-tight">Ask with evidence</h1>
           <p className="mt-2 max-w-lg text-sm text-muted">
-            Every answer is classified. Unsupported confidence is a failure. Sandbox writes execute only after exact-hash
-            approval. Production execution stays disabled.
+            Every answer is classified. Unsupported confidence is a failure. This console is this session — earlier
+            tasks stay on Tasks. Production execution stays disabled.
           </p>
           <p className="mt-3 font-mono text-[11px] text-subtle">
             Session budget {formatUsd(overview.data?.budgetRemainingUsd ?? 25, 2)} left of{" "}
@@ -120,23 +113,34 @@ function WorkPage() {
         </div>
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 md:px-8">
           {thread.length === 0 ? (
-            <div className="grid gap-2 sm:grid-cols-2">
-              {books.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => {
-                    setDraft(s.q);
-                    mut.mutate(s.q);
-                  }}
-                  className="rounded-[var(--radius-md)] border border-border bg-surface p-3 text-left hover:border-border-strong"
-                >
-                  <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">{s.kicker}</div>
-                  <div className="mt-1 text-sm text-fg">{s.q}</div>
-                  <div className="mt-1 text-xs text-muted">{s.why}</div>
-                </button>
-              ))}
-            </div>
+            <>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {books.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      setDraft(s.q);
+                      mut.mutate(s.q);
+                    }}
+                    className="rounded-[var(--radius-md)] border border-border bg-surface p-3 text-left hover:border-border-strong"
+                  >
+                    <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">{s.kicker}</div>
+                    <div className="mt-1 text-sm text-fg">{s.q}</div>
+                    <div className="mt-1 text-xs text-muted">{s.why}</div>
+                  </button>
+                ))}
+              </div>
+              {(history.data?.length ?? 0) > 0 ? (
+                <p className="text-xs text-muted">
+                  {history.data!.length} earlier task{history.data!.length === 1 ? "" : "s"} live on{" "}
+                  <Link to="/tasks" className="underline">
+                    Tasks
+                  </Link>
+                  . They are not replayed here.
+                </p>
+              ) : null}
+            </>
           ) : null}
           {thread.map((item) => (
             <article key={item.taskId} className="flex w-full flex-col gap-2">

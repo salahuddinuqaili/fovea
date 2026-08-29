@@ -124,7 +124,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="border-t border-border p-3">
           <div className="rounded-[var(--radius-md)] border border-border bg-bg px-3 py-2.5">
             <div className="text-[10px] uppercase tracking-[0.14em] text-subtle">Autonomy</div>
-            <div className="mt-1 font-mono text-xs text-fg">Stage B · sandbox after approval</div>
+            <div className="mt-1 font-mono text-xs text-fg">Stage B · named grants only</div>
           </div>
           <Link to="/about" className="mt-2 block px-1 py-1 text-[11px] text-subtle hover:text-fg">
             About this OS

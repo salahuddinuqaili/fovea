@@ -85,6 +85,8 @@ export interface AutonomyGrant {
   issuedBy: string;
   issuedAt: string;
   expiresAt: string;
+  revokedAt: string | null;
+  revokedBy: string | null;
 }
 
 export interface PolicyRequest {
@@ -526,6 +528,6 @@ export interface QueryJob {
   dryRun: boolean;
 }
 
-export const AGENT_RELEASE = "fovea-4.0.0";
-export const POLICY_VERSION = "1.2.0";
+export const AGENT_RELEASE = "fovea-5.0.0";
+export const POLICY_VERSION = "1.3.0";
 export const AGENT_ID = "analytics-investigator@1.0.0";

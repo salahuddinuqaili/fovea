@@ -20,6 +20,7 @@ import {
   submitWork,
   tryLoadRelease,
   putGrant,
+  retractGrant,
 } from "@/kernel";
 import { controlMeta, withControlPlane } from "@/lib/control-persist";
 import type { KillSwitchState, SkillManifest } from "@/kernel/types";
@@ -131,6 +132,21 @@ export const putGrantFn = createServerFn({ method: "POST" })
         task: data.task,
         actions: data.actions,
         maxRisk: data.maxRisk,
+      }),
+    ),
+  );
+
+export const retractGrantFn = createServerFn({ method: "POST" })
+  .validator(
+    (d: { actorId: string; grantId?: string; principalId?: string; tool?: string; task?: string }) => d,
+  )
+  .handler(async ({ data }) =>
+    withControlPlane(() =>
+      retractGrant(data.actorId, {
+        grantId: data.grantId,
+        principalId: data.principalId,
+        tool: data.tool,
+        task: data.task,
       }),
     ),
   );

@@ -25,6 +25,7 @@ const JOURNEYS = [
   { title: "Autonomy switch", body: "Enable autonomous mode is refused. Stage D is a named grant, never a wildcard." },
   { title: "Live warehouse", body: "The adapter is registered and gated. No DSN, no principal allowlist, writes disabled." },
   { title: "Grant desk", body: "Alex issues a named grant. Maya cannot. The grant is stored and does not promote Stage D." },
+  { title: "Grant lifecycle", body: "The grant covers Maya’s named metric. A duplicate is refused. Revoke ends coverage. Stage D stays unpromoted." },
 ];
 
 function AboutPage() {
@@ -43,7 +44,7 @@ function AboutPage() {
         </Link>
       </header>
       <main className="mx-auto max-w-5xl px-5 pb-24">
-        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v4.0</p>
+        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v5.0</p>
         <h1 className="mt-3 max-w-3xl font-display text-5xl leading-tight tracking-tight md:text-7xl">
           Accuracy at the center.
         </h1>

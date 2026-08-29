@@ -20,6 +20,7 @@ import type {
   WriteCredential,
 } from "./types.ts";
 import { AGENT_RELEASE, POLICY_VERSION } from "./types.ts";
+import { isGrantActive } from "./grants.ts";
 
 export interface KernelState {
   sessions: Session[];
@@ -55,8 +56,8 @@ export function emptyKill(): KillSwitchState {
 
 export function seedState(): KernelState {
   const release = buildRelease({
-    version: "4.0.0",
-    sourceCommit: "v40desk01",
+    version: "5.0.0",
+    sourceCommit: "v50life01",
     tree: SEED_TREE,
   });
   return {
@@ -118,7 +119,15 @@ function normalizeState(s: KernelState): KernelState {
     loadError: s.loadError ?? null,
     credentials: s.credentials ?? [],
     sandbox: s.sandbox ?? seedSandbox(),
-    grants: s.grants ?? [],
+    grants: (s.grants ?? []).map(normalizeGrant),
+  };
+}
+
+function normalizeGrant(g: AutonomyGrant): AutonomyGrant {
+  return {
+    ...g,
+    revokedAt: g.revokedAt ?? null,
+    revokedBy: g.revokedBy ?? null,
   };
 }
 
@@ -227,9 +236,15 @@ export class KernelStore {
 
   addGrant(grant: AutonomyGrant) {
     this.state.grants = this.state.grants.filter(
-      (g) => !(g.principalId === grant.principalId && g.tool === grant.tool && g.task === grant.task),
+      (g) => !(isGrantActive(g) && g.principalId === grant.principalId && g.tool === grant.tool && g.task === grant.task),
     );
     this.state.grants.unshift(grant);
+  }
+
+  applyGrant(grant: AutonomyGrant) {
+    const i = this.state.grants.findIndex((g) => g.id === grant.id);
+    if (i >= 0) this.state.grants[i] = grant;
+    else this.state.grants.unshift(grant);
   }
 }
 

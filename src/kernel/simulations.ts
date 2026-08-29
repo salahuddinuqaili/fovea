@@ -1,7 +1,7 @@
 import { decideApproval, runWork } from "./orchestrator.ts";
 import { unsigned, verifyRelease, buildRelease, SEED_TREE } from "./release.ts";
 import { KernelStore } from "./store.ts";
-import { shadowStageD } from "./grants.ts";
+import { isGrantActive, matchingGrant, shadowStageD } from "./grants.ts";
 
 export interface SimulationStep {
   name: string;
@@ -313,6 +313,63 @@ async function grantDesk(store: KernelStore): Promise<Omit<SimulationResult, "du
   };
 }
 
+async function grantLifecycle(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const issued = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Grant Maya warehouse.query for investigate-metric.",
+  });
+  const covered = await runWork(store, {
+    principalId: "prin_maya",
+    message: "What was north-star revenue last week?",
+  });
+  const dup = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Grant Maya warehouse.query for investigate-metric.",
+  });
+  const mayaRevoke = await runWork(store, {
+    principalId: "prin_maya",
+    message: "Revoke Maya warehouse.query for investigate-metric.",
+  });
+  const revoked = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Revoke Maya warehouse.query for investigate-metric.",
+  });
+  const after = await runWork(store, {
+    principalId: "prin_maya",
+    message: "What was north-star revenue last week?",
+  });
+  const live = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Connect the live warehouse.",
+  });
+  const hit = matchingGrant(store.state.grants, {
+    principalId: "prin_maya",
+    tool: "warehouse.query",
+    task: "investigate-metric",
+    action: "read",
+  });
+  const steps = [
+    step("issued", issued.status === "completed", issued.status),
+    step("covered", covered.behaviors.includes("grant_covers"), covered.behaviors.join(",")),
+    step("duplicate_denied", dup.status === "refused", dup.status),
+    step("analyst_cannot_revoke", mayaRevoke.status === "refused", mayaRevoke.status),
+    step("revoked", revoked.behaviors.includes("grant_revoked"), revoked.status),
+    step("no_active", store.state.grants.filter((g) => isGrantActive(g)).length === 0, String(store.state.grants.length)),
+    step("uncovered", !after.behaviors.includes("grant_covers"), after.behaviors.join(",")),
+    step("match_gone", hit === null, hit ? hit.id : "none"),
+    step("live_still_gated", live.behaviors.includes("live_warehouse_gated"), live.status),
+    step("not_promoted", issued.behaviors.includes("no_self_promotion"), "ok"),
+  ];
+  return {
+    id: "sim_grant_lifecycle",
+    title: "Grant lifecycle",
+    persona: "Alex Voss → Maya Chen",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: steps.every((s) => s.passed) ? [] : ["Grant lifecycle friction: issue, cover, duplicate, revoke."],
+  };
+}
+
 const RUNNERS = [
   analystMorning,
   sandboxWriteLoop,
@@ -323,6 +380,7 @@ const RUNNERS = [
   autonomySwitchRefused,
   liveWarehouseGated,
   grantDesk,
+  grantLifecycle,
 ];
 
 export async function runOperatorSimulations(): Promise<{
