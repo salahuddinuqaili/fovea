@@ -27,6 +27,14 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - Shadow evaluation of candidate Stage C autonomy — never promotes itself
 - Production execution remains disabled until gates pass
 
+## v2.1 — Operator desk (this tree)
+
+- Incident brief skill (three canonical metrics, no causal claim)
+- Copyable evidence pack on every work result
+- Session cost budget enforced
+- In-app operator guide and first-run on Command
+- README rewritten for people who will actually click around
+
 ## v3 — Selected Stage D workflows
 
 - Per-tool, per-task, per-risk permissions

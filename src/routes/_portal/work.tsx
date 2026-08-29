@@ -5,11 +5,12 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/input";
-import { bootstrapFn, listTasksFn, submitWorkFn } from "@/lib/api";
+import { bootstrapFn, listTasksFn, overviewFn, submitWorkFn } from "@/lib/api";
 import { playbooksFor } from "@/lib/playbooks";
 import { useFoveaSession } from "@/lib/session";
 import { cn, formatUsd, shortId } from "@/lib/utils";
 import type { NextAction, WorkResult } from "@/kernel/types";
+import { evidencePackJson } from "@/kernel/evidence";
 
 type Search = { q?: string };
 
@@ -30,6 +31,10 @@ function WorkPage() {
   const autoRan = useRef<string | null>(null);
   const qc = useQueryClient();
   const boot = useQuery({ queryKey: ["bootstrap"], queryFn: () => bootstrapFn() });
+  const overview = useQuery({
+    queryKey: ["overview", principalId],
+    queryFn: () => overviewFn({ data: { principalId } }),
+  });
   const history = useQuery({
     queryKey: ["tasks", principalId],
     queryFn: () => listTasksFn({ data: { principalId } }),
@@ -102,6 +107,10 @@ function WorkPage() {
           <p className="mt-2 max-w-lg text-sm text-muted">
             Every answer is classified. Unsupported confidence is a failure. Sandbox writes execute only after exact-hash
             approval. Production execution stays disabled.
+          </p>
+          <p className="mt-3 font-mono text-[11px] text-subtle">
+            Session budget {formatUsd(overview.data?.budgetRemainingUsd ?? 25, 2)} left of{" "}
+            {formatUsd(overview.data?.budgetUsd ?? 25, 0)}
           </p>
         </div>
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 md:px-8">
@@ -242,6 +251,26 @@ function EvidencePane({
           <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">Next</div>
           <div className="mt-1 text-sm font-medium">{result.nextAction.label}</div>
           <p className="mt-1 text-xs text-muted">{result.nextAction.hint}</p>
+        </button>
+      ) : null}
+      {result.evidencePack ? (
+        <button
+          type="button"
+          className="mt-3 w-full rounded-[var(--radius-md)] border border-border bg-bg px-4 py-3 text-left"
+          onClick={() => {
+            const json = evidencePackJson(result.evidencePack!);
+            void navigator.clipboard.writeText(json).then(
+              () => toast.success("Evidence pack copied."),
+              () => toast.message(json.slice(0, 180)),
+            );
+          }}
+        >
+          <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">Evidence pack</div>
+          <div className="mt-1 font-mono text-[11px] text-muted">
+            {result.evidencePack.claimClass} · {result.evidencePack.metrics.length} metrics ·{" "}
+            {result.evidencePack.queryHashes.length} queries · {shortId(result.evidencePack.outputHash, 10)}
+          </div>
+          <div className="mt-1 text-xs text-muted">Copy JSON. The claim, citations, and hashes travel together.</div>
         </button>
       ) : null}
       <Section title="Policy">

@@ -196,7 +196,33 @@ async function backfillStillPlanOnly(store: KernelStore): Promise<Omit<Simulatio
   };
 }
 
-const RUNNERS = [analystMorning, sandboxWriteLoop, adversarialDay, auditorShift, backfillStillPlanOnly];
+async function incidentAfternoon(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const brief = await runWork(store, {
+    principalId: "prin_maya",
+    message: "Investigate the dip last week.",
+  });
+  const pack = brief.evidencePack;
+  const causal = /caused by|therefore the pipeline caused|proves that the failed run/i.test(brief.answer?.text ?? "");
+  const steps = [
+    step("completed", brief.status === "completed", brief.status),
+    step("derived", brief.answer?.claimClass === "derived", brief.answer?.claimClass ?? "none"),
+    step("pack_present", Boolean(pack), pack ? pack.resultId : "missing"),
+    step("pack_metrics", (pack?.metrics.length ?? 0) >= 3, String(pack?.metrics.length ?? 0)),
+    step("pack_queries", (pack?.queryHashes.length ?? 0) >= 3, String(pack?.queryHashes.length ?? 0)),
+    step("no_causal_claim", !causal && brief.behaviors.includes("no_causal_claim"), causal ? "overclaimed" : "ok"),
+    step("next_is_backfill", Boolean(brief.nextAction?.href.includes("Backfill")), brief.nextAction?.label ?? "missing"),
+  ];
+  return {
+    id: "sim_incident_afternoon",
+    title: "Incident afternoon desk",
+    persona: "Maya Chen",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: pack ? [] : ["Incident brief did not attach an evidence pack."],
+  };
+}
+
+const RUNNERS = [analystMorning, sandboxWriteLoop, adversarialDay, auditorShift, backfillStillPlanOnly, incidentAfternoon];
 
 export async function runOperatorSimulations(): Promise<{
   ranAt: string;

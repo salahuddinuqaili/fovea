@@ -444,6 +444,19 @@ export interface WorkAnswer {
   citations: Citation[];
 }
 
+export interface EvidencePack {
+  resultId: string;
+  claimClass: ClaimClass;
+  claim: string;
+  citations: Citation[];
+  queryHashes: string[];
+  metrics: string[];
+  policyDecisions: Decision[];
+  agentRelease: string;
+  outputHash: string;
+  exportedAt: string;
+}
+
 export interface NextAction {
   label: string;
   href: string;
@@ -480,6 +493,7 @@ export interface WorkResult {
   approvals: Approval[];
   toolCalls: ToolCall[];
   nextAction: NextAction | null;
+  evidencePack: EvidencePack | null;
   createdAt: string;
   finishedAt: string;
 }
@@ -496,6 +510,6 @@ export interface QueryJob {
   dryRun: boolean;
 }
 
-export const AGENT_RELEASE = "fovea-2.0.0";
+export const AGENT_RELEASE = "fovea-2.1.0";
 export const POLICY_VERSION = "1.1.0";
 export const AGENT_ID = "analytics-investigator@1.0.0";

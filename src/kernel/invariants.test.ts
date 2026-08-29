@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("2.0.0");
+    const report = await runEvalSuite("2.1.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,8 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all five journeys pass", async () => {
+  it("all six journeys pass", async () => {
     const report = await runOperatorSimulations();
+    assert.equal(report.simulations.length, 6);
     assert.equal(
       report.passed,
       true,
@@ -214,5 +215,31 @@ describe("v2 adapters", () => {
     assert.ok(r.plan?.adapter.id);
     assert.ok((r.plan?.partitionStates.length ?? 0) > 0);
     assert.equal(adapterFor("fct_orders").execute().reason, "production_execution_disabled");
+  });
+});
+
+describe("incident brief and budget", () => {
+  it("produces an evidence pack without a causal claim", async () => {
+    const store = new KernelStore();
+    const r = await runWork(store, {
+      principalId: "prin_maya",
+      message: "Investigate the dip last week.",
+    });
+    assert.equal(r.status, "completed");
+    assert.equal(r.answer?.claimClass, "derived");
+    assert.ok((r.evidencePack?.metrics.length ?? 0) >= 3);
+    assert.equal(r.behaviors.includes("no_causal_claim"), true);
+  });
+
+  it("blocks work when the session budget is exhausted", async () => {
+    const store = new KernelStore();
+    const session = store.getOrCreateSession("prin_maya");
+    session.spentUsd = session.costBudgetUsd;
+    const r = await runWork(store, {
+      principalId: "prin_maya",
+      message: "What was north-star revenue last week?",
+    });
+    assert.equal(r.status, "blocked");
+    assert.equal(r.behaviors.includes("budget_exhausted"), true);
   });
 });

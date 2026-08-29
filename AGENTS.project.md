@@ -2,7 +2,7 @@
 
 This is an **open-source Agentic OS** (name: **Fovea**). Continue in place. Do not scaffold a new app.
 
-## Current version: v2.0.0 — Adapters + shadow autonomy (prod exec still off)
+## Current version: v2.1.0 — Operator desk (prod exec still off)
 
 Locked defaults:
 
@@ -11,7 +11,7 @@ Locked defaults:
 - Database ON (unowned control snapshot via PGLite/Neon; personal memory is in-process only)
 - Principals remain Stage B. Writes require exact-hash approval.
 - Stage C path: sandbox.* writes after approval + short-lived credential. Production execution disabled.
-- Skills: investigate-metric, write-and-validate-sql, plan-backfill, session-close
+- Skills: investigate-metric, investigate-incident, write-and-validate-sql, plan-backfill, session-close
 - Operator simulations in `src/kernel/simulations.ts` are a release input.
 
 ## Do not reopen
@@ -29,7 +29,6 @@ See README “principles” and the original implementation guide. Intersection 
 
 ## Next versions (do these, don’t rebuild)
 
-- **v2 (this tree)** — pipeline adapters, partition state, cost vs dry-run, rollback, shadow eval. Production backfill exec still disabled.
-- **v3** — SSO, KMS signing, live warehouse adapter behind policy
+- **v3** — SSO, KMS signing, live warehouse adapter behind policy. Auth stays OFF until the user explicitly asks for accounts.
 
 Keep the portal on `0.0.0.0:8080` via `npm run dev` and `startup.sh`.

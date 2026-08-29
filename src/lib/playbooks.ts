@@ -6,12 +6,53 @@ export interface Playbook {
   roles: string[];
 }
 
+export interface FirstRunStep {
+  step: string;
+  title: string;
+  q: string;
+  expect: string;
+}
+
+export const FIRST_RUN: FirstRunStep[] = [
+  {
+    step: "1",
+    title: "Ask a named metric",
+    q: "What was north-star revenue last week?",
+    expect: "A supported answer with the query and provenance attached.",
+  },
+  {
+    step: "2",
+    title: "Ask something vague",
+    q: "How is revenue doing?",
+    expect: "Abstention. Fovea will not guess which revenue you mean.",
+  },
+  {
+    step: "3",
+    title: "Investigate the dip",
+    q: "Investigate the dip last week.",
+    expect: "An incident brief across three canonical metrics. No causal claim.",
+  },
+  {
+    step: "4",
+    title: "Propose a sandbox write",
+    q: "INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', 'investigate dip')",
+    expect: "Needs approval. Switch to Jordan Hale, then approve the exact hash.",
+  },
+];
+
 export const PLAYBOOKS: Playbook[] = [
   {
     id: "northstar",
     kicker: "Metric",
     q: "What was north-star revenue last week?",
     why: "Canonical lookup with query + provenance.",
+    roles: ["analyst", "approver", "os_owner"],
+  },
+  {
+    id: "incident",
+    kicker: "Incident",
+    q: "Investigate the dip last week.",
+    why: "Three canonical metrics, pipeline coincidence, no causal claim.",
     roles: ["analyst", "approver", "os_owner"],
   },
   {

@@ -49,15 +49,16 @@ export function getOverview(principalId: string) {
   const store = getStore();
   const p = store.principal(principalId);
   const mine = store.state.tasks.filter((t) => t.principalId === principalId);
-  const costs = store.state.costs;
-  const spent = costs.reduce((s, c) => s + c.amountUsd, 0);
+  const session = store.state.sessions.find((s) => s.humanPrincipalId === principalId);
   return {
     principal: p,
     tasks: mine.slice(0, 12),
     allTaskCount: store.state.tasks.length,
     pendingApprovals: store.state.approvals.filter((a) => a.decision === "pending"),
     recentEvents: store.state.events.slice(0, 18),
-    spentUsd: spent,
+    spentUsd: session?.spentUsd ?? 0,
+    budgetUsd: session?.costBudgetUsd ?? 25,
+    budgetRemainingUsd: Math.max(0, (session?.costBudgetUsd ?? 25) - (session?.spentUsd ?? 0)),
     kill: store.state.kill,
     release: store.state.loadedRelease,
     verification: store.state.loadedRelease
@@ -127,7 +128,19 @@ export function getCost(principalId?: string) {
   const items = principalId ? store.state.costs.filter((c) => c.principalId === principalId) : store.state.costs;
   const byKind: Record<string, number> = {};
   for (const c of items) byKind[c.kind] = (byKind[c.kind] ?? 0) + c.amountUsd;
-  return { items: items.slice(0, 80), byKind, total: items.reduce((s, c) => s + c.amountUsd, 0) };
+  const session = principalId
+    ? store.state.sessions.find((s) => s.humanPrincipalId === principalId)
+    : store.state.sessions[0];
+  const budgetUsd = session?.costBudgetUsd ?? 25;
+  const spentUsd = session?.spentUsd ?? 0;
+  return {
+    items: items.slice(0, 80),
+    byKind,
+    total: items.reduce((s, c) => s + c.amountUsd, 0),
+    budgetUsd,
+    spentUsd,
+    remainingUsd: Math.max(0, budgetUsd - spentUsd),
+  };
 }
 
 export function getImprovements() {
@@ -135,7 +148,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("2.0.0");
+  return runEvalSuite("2.1.0");
 }
 
 export async function runSimulations() {

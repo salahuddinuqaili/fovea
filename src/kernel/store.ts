@@ -53,8 +53,8 @@ export function emptyKill(): KillSwitchState {
 
 export function seedState(): KernelState {
   const release = buildRelease({
-    version: "2.0.0",
-    sourceCommit: "v2adapters01",
+    version: "2.1.0",
+    sourceCommit: "v21desk01",
     tree: SEED_TREE,
   });
   return {
@@ -92,6 +92,7 @@ function normalizeState(s: KernelState): KernelState {
     tasks: (s.tasks ?? []).map((t) => ({
       ...t,
       nextAction: t.nextAction ?? null,
+      evidencePack: t.evidencePack ?? null,
       plan: t.plan ? normalizePlan(t.plan) : t.plan,
     })),
     events: s.events ?? [],
@@ -148,6 +149,8 @@ export class KernelStore {
       ...record,
     };
     this.state.costs.unshift(full);
+    const session = this.state.sessions.find((s) => s.humanPrincipalId === full.principalId);
+    if (session) session.spentUsd = Number((session.spentUsd + full.amountUsd).toFixed(6));
     return full;
   }
 

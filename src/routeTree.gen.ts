@@ -17,6 +17,7 @@ import { Route as PortalAuditRouteImport } from './routes/_portal/audit'
 import { Route as PortalBackfillsRouteImport } from './routes/_portal/backfills'
 import { Route as PortalCostRouteImport } from './routes/_portal/cost'
 import { Route as PortalEvalsRouteImport } from './routes/_portal/evals'
+import { Route as PortalGuideRouteImport } from './routes/_portal/guide'
 import { Route as PortalHealthRouteImport } from './routes/_portal/health'
 import { Route as PortalMemoryRouteImport } from './routes/_portal/memory'
 import { Route as PortalModelsRouteImport } from './routes/_portal/models'
@@ -65,6 +66,11 @@ const PortalCostRoute = PortalCostRouteImport.update({
 const PortalEvalsRoute = PortalEvalsRouteImport.update({
   id: '/evals',
   path: '/evals',
+  getParentRoute: () => PortalRoute,
+} as any)
+const PortalGuideRoute = PortalGuideRouteImport.update({
+  id: '/guide',
+  path: '/guide',
   getParentRoute: () => PortalRoute,
 } as any)
 const PortalHealthRoute = PortalHealthRouteImport.update({
@@ -126,6 +132,7 @@ export interface FileRoutesByFullPath {
   '/backfills': typeof PortalBackfillsRoute
   '/cost': typeof PortalCostRoute
   '/evals': typeof PortalEvalsRoute
+  '/guide': typeof PortalGuideRoute
   '/health': typeof PortalHealthRoute
   '/memory': typeof PortalMemoryRoute
   '/models': typeof PortalModelsRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/backfills': typeof PortalBackfillsRoute
   '/cost': typeof PortalCostRoute
   '/evals': typeof PortalEvalsRoute
+  '/guide': typeof PortalGuideRoute
   '/health': typeof PortalHealthRoute
   '/memory': typeof PortalMemoryRoute
   '/models': typeof PortalModelsRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/_portal/backfills': typeof PortalBackfillsRoute
   '/_portal/cost': typeof PortalCostRoute
   '/_portal/evals': typeof PortalEvalsRoute
+  '/_portal/guide': typeof PortalGuideRoute
   '/_portal/health': typeof PortalHealthRoute
   '/_portal/memory': typeof PortalMemoryRoute
   '/_portal/models': typeof PortalModelsRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/backfills'
     | '/cost'
     | '/evals'
+    | '/guide'
     | '/health'
     | '/memory'
     | '/models'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
     | '/backfills'
     | '/cost'
     | '/evals'
+    | '/guide'
     | '/health'
     | '/memory'
     | '/models'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '/_portal/backfills'
     | '/_portal/cost'
     | '/_portal/evals'
+    | '/_portal/guide'
     | '/_portal/health'
     | '/_portal/memory'
     | '/_portal/models'
@@ -299,6 +311,13 @@ declare module '@tanstack/react-router' {
       path: '/evals'
       fullPath: '/evals'
       preLoaderRoute: typeof PortalEvalsRouteImport
+      parentRoute: typeof PortalRoute
+    }
+    '/_portal/guide': {
+      id: '/_portal/guide'
+      path: '/guide'
+      fullPath: '/guide'
+      preLoaderRoute: typeof PortalGuideRouteImport
       parentRoute: typeof PortalRoute
     }
     '/_portal/health': {
@@ -380,6 +399,7 @@ interface PortalRouteChildren {
   PortalBackfillsRoute: typeof PortalBackfillsRoute
   PortalCostRoute: typeof PortalCostRoute
   PortalEvalsRoute: typeof PortalEvalsRoute
+  PortalGuideRoute: typeof PortalGuideRoute
   PortalHealthRoute: typeof PortalHealthRoute
   PortalMemoryRoute: typeof PortalMemoryRoute
   PortalModelsRoute: typeof PortalModelsRoute
@@ -399,6 +419,7 @@ const PortalRouteChildren: PortalRouteChildren = {
   PortalBackfillsRoute: PortalBackfillsRoute,
   PortalCostRoute: PortalCostRoute,
   PortalEvalsRoute: PortalEvalsRoute,
+  PortalGuideRoute: PortalGuideRoute,
   PortalHealthRoute: PortalHealthRoute,
   PortalMemoryRoute: PortalMemoryRoute,
   PortalModelsRoute: PortalModelsRoute,

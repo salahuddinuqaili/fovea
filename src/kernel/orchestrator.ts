@@ -1,6 +1,7 @@
 import { digestObject, sha256, uuid } from "./crypto.ts";
 import { FILL_RATE, METRICS, REFUND_RATE } from "./fixtures.ts";
 import { executeApprovedAction, hashProposedAction, type ExecutionReport } from "./credentials.ts";
+import { toEvidencePack } from "./evidence.ts";
 import { canReadMemory, toImprovementEvent } from "./memory.ts";
 import { infer, pickModel, xaiAvailable } from "./models.ts";
 import { evaluatePolicy } from "./policy.ts";
@@ -37,6 +38,7 @@ export type Intent =
   | "ambiguous_metric"
   | "memory_probe"
   | "session_close"
+  | "incident"
   | "general";
 
 export function classifyIntent(text: string): Intent {
@@ -48,6 +50,13 @@ export function classifyIntent(text: string): Intent {
   if (/backfill|rerun (the )?(last|past|affected)|reprocess partition/i.test(t)) return "backfill";
   if ((WRITE_ASK.test(t) || /\bwrite .{0,60}sandbox\./i.test(t)) && /\bsandbox\./i.test(t)) return "sandbox_write";
   if (WRITE_ASK.test(t)) return "write";
+  if (
+    /investigate (the )?(dip|drop|week|incident)/i.test(t) ||
+    /what happened (last week|to the numbers|on 2026)/i.test(t) ||
+    /why did .{0,40}(drop|dip|fall)/i.test(t) ||
+    /incident brief/i.test(t)
+  )
+    return "incident";
   const metricHit = METRICS.filter(
     (m) =>
       t.toLowerCase().includes(m.name.toLowerCase()) ||
@@ -175,15 +184,29 @@ export async function runWork(
       approvals,
       toolCalls,
       nextAction: nextActionFor(partial.status, intent, approvals),
+      evidencePack: null,
       createdAt: started,
       finishedAt: new Date().toISOString(),
       status: partial.status,
     };
+    result.evidencePack = toEvidencePack(result);
     emit("result.produced", `status=${result.status}`);
     emit("provenance.finalized", result.provenance?.resultId ?? "");
     store.addTask(result);
     return result;
   };
+
+  if (session.costBudgetUsd - session.spentUsd <= 0) {
+    behaviors.push("budget_exhausted", "no_write_executed");
+    return finish({
+      status: "blocked",
+      answer: {
+        claimClass: "refusal",
+        text: `Session cost budget of $${session.costBudgetUsd.toFixed(2)} is exhausted (spent $${session.spentUsd.toFixed(3)}). Fovea will not start another paid tool or model call until the session is closed or the budget is raised by an OS owner.`,
+        citations: [{ label: "session budget", kind: "policy", ref: "cost.budget" }],
+      },
+    });
+  }
 
   if (intent === "injection" || intent === "policy_bypass") {
     behaviors.push("refused_policy", "injection_detected", "untrusted_content_not_elevated");
@@ -311,6 +334,21 @@ export async function runWork(
 
   if (intent === "session_close") {
     return finish(runSessionClose(store, principal.id, taskId, session.sessionId, behaviors, emit));
+  }
+
+  if (intent === "incident") {
+    return finish(
+      runIncident(store, {
+        principal: { id: principal.id },
+        taskId,
+        message: input.message,
+        policyFor,
+        toolCalls,
+        provenance,
+        behaviors,
+        emit,
+      }),
+    );
   }
 
   if (/readme|ticket|AN-1842|runbook/i.test(input.message)) {
@@ -709,6 +747,52 @@ function runSessionClose(
   };
 }
 
+function runIncident(store: KernelStore, ctx: WorkCtx): Pick<WorkResult, "status" | "answer"> {
+  const { policyFor, toolCalls, provenance, behaviors, emit, taskId } = ctx;
+  const readPol = policyFor({ action: "read", tool: "warehouse.query", resource: "analytics.fct_orders", dataClass: "confidential" });
+  if (readPol.decision === "deny") {
+    behaviors.push("refused_policy");
+    return { status: "refused", answer: { claimClass: "refusal", text: readPol.reason, citations: [] } };
+  }
+  behaviors.push("incident_brief", "canonical_lookup", "no_causal_claim", "query_executed_read_only", "provenance_complete");
+  const ids = ["northstar_revenue", "order_fill_rate", "refund_rate"] as const;
+  const lines: string[] = [];
+  const citations: NonNullable<WorkResult["answer"]>["citations"] = [];
+  for (const id of ids) {
+    const sql = sqlForMetric(id);
+    const dry = dryRunSql(sql);
+    toolCalls.push(wrapToolCall("warehouse.dry_run", { sql }, { valid: dry.valid }, { dryRun: true, costUsd: 0 }));
+    const job = executeReadSql(sql);
+    toolCalls.push(wrapToolCall("warehouse.query", { sql }, { jobId: job.jobId, rowCount: job.rows.length }, { costUsd: job.costUsd }));
+    store.addCost({ taskId, principalId: ctx.principal.id, kind: "warehouse", amountUsd: job.costUsd, detail: job.jobId });
+    emit("tool.executed", "warehouse.query", { cost: job.costUsd });
+    provenance.queries.push({
+      queryHash: job.queryHash,
+      jobId: job.jobId,
+      datasets: ["analytics"],
+      tables: job.tables,
+      partitions: job.rows.map((r) => String(r.week_start ?? "")),
+      executedAt: job.executedAt,
+    });
+    provenance.metricDefinitions.push(id);
+    const last = job.rows[job.rows.length - 1];
+    const prev = job.rows[job.rows.length - 2];
+    const metric = METRICS.find((m) => m.id === id);
+    lines.push(interpretMetric(id, last, prev));
+    citations.push({ label: metric?.name ?? id, kind: "metric", ref: id });
+    citations.push({ label: job.jobId, kind: "query", ref: job.queryHash });
+  }
+  citations.push({ label: "fct_orders failed run", kind: "pipeline", ref: "fct_orders" });
+  return {
+    status: "completed",
+    answer: {
+      claimClass: "derived",
+      text: `Incident brief for week starting 2026-08-24.\n\n${lines.join("\n\n")}\n\nThese moves coincide with the failed fct_orders run on 2026-08-27. Fovea does not assert causation from that coincidence. Treat the week as possibly incomplete. Next step is a governed backfill plan of the affected partitions — execution stays disabled.`,
+      citations,
+    },
+  };
+}
+
 interface WorkCtx {
   principal: { id: string };
   taskId: string;
@@ -725,6 +809,7 @@ function titleFor(intent: Intent, message: string) {
   if (intent === "backfill") return "Plan backfill";
   if (intent === "sql") return "Validate SQL";
   if (intent === "sandbox_write") return "Propose sandbox write";
+  if (intent === "incident") return "Incident brief";
   if (intent === "session_close") return "Session close";
   if (intent === "injection" || intent === "policy_bypass") return "Policy refusal";
   if (intent === "ambiguous_metric") return "Abstention";
@@ -753,7 +838,7 @@ function nextActionFor(
       hint: "Name a canonical metric. Fovea will not guess from “revenue”.",
     };
   }
-  if (status === "completed" && intent === "metric") {
+  if (status === "completed" && (intent === "metric" || intent === "incident")) {
     return {
       label: "Plan the affected backfill",
       href: "/work?q=" + encodeURIComponent("Backfill the affected partitions after the upstream correction."),
@@ -776,9 +861,9 @@ function nextActionFor(
   }
   if (status === "blocked") {
     return {
-      label: "Write a read-only query",
-      href: "/work?q=" + encodeURIComponent("SQL for weekly active accounts"),
-      hint: "analytics.* writes stay blocked. Try a validated read, or a sandbox.* proposal.",
+      label: "Close the session",
+      href: "/work?q=" + encodeURIComponent("Close the session."),
+      hint: "Budget is exhausted, or the write was rejected. Close the session or try a read-only question.",
     };
   }
   if (intent === "session_close") {
@@ -797,6 +882,7 @@ function nextActionFor(
 
 function skillFor(intent: Intent) {
   if (intent === "metric") return "investigate-metric";
+  if (intent === "incident") return "investigate-incident";
   if (intent === "sql") return "write-and-validate-sql";
   if (intent === "backfill") return "plan-backfill";
   if (intent === "session_close") return "session-close";

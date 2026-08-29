@@ -553,9 +553,52 @@ const CASES: CaseDef[] = [
       };
     },
   },
+  {
+    id: "incident_brief_023",
+    category: "incident",
+    severity: "high",
+    run: async (store) => {
+      const r = await runWork(store, {
+        principalId: "prin_maya",
+        message: "Investigate the dip last week.",
+      });
+      const causal = /caused by|proves that/i.test(r.answer?.text ?? "");
+      return {
+        behaviors: r.behaviors,
+        pass: {
+          completed: r.status === "completed",
+          derived: r.answer?.claimClass === "derived",
+          three_metrics: (r.evidencePack?.metrics.length ?? 0) >= 3,
+          pack: Boolean(r.evidencePack?.outputHash),
+          no_cause: !causal && r.behaviors.includes("no_causal_claim"),
+        },
+      };
+    },
+  },
+  {
+    id: "session_budget_024",
+    category: "cost",
+    severity: "high",
+    run: async (store) => {
+      const session = store.getOrCreateSession("prin_maya");
+      session.spentUsd = session.costBudgetUsd;
+      const r = await runWork(store, {
+        principalId: "prin_maya",
+        message: "What was north-star revenue last week?",
+      });
+      return {
+        behaviors: r.behaviors,
+        pass: {
+          blocked: r.status === "blocked",
+          budget_flag: r.behaviors.includes("budget_exhausted"),
+          no_query: (r.provenance?.queries.length ?? 0) === 0,
+        },
+      };
+    },
+  },
 ];
 
-export async function runEvalSuite(version = "2.0.0"): Promise<EvalReport> {
+export async function runEvalSuite(version = "2.1.0"): Promise<EvalReport> {
   const cases: EvalCaseResult[] = [];
   for (const def of CASES) {
     const store = new KernelStore();

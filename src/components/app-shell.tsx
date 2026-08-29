@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
+  BookOpen,
   ClipboardCheck,
   Cpu,
   FileSearch,
@@ -38,6 +39,7 @@ const NAV = [
   {
     label: "Knowledge",
     items: [
+      { to: "/guide", label: "Guide", icon: BookOpen },
       { to: "/memory", label: "Memory", icon: MemoryStick },
       { to: "/skills", label: "Skills", icon: Sparkles },
     ],

@@ -701,6 +701,17 @@ export const ENTERPRISE_SKILLS: SkillManifest[] = [
     instructions: "Plan only. Compute blast radius, cost, dependency order, rollback.",
   },
   {
+    id: "investigate-incident",
+    version: "1.0.0",
+    scope: "enterprise",
+    owner: "org",
+    description: "Pull canonical metrics for a dip, correlate with pipeline health, do not claim causation.",
+    allowedTools: ["warehouse.query", "warehouse.dry_run", "pipeline.graph", "observability.read", "docs.read"],
+    requestedPermissions: ["read", "analyze", "plan"],
+    dataClasses: ["internal", "confidential"],
+    instructions: "Retrieve north-star, fill rate, and refund rate. Note coinciding pipeline failures. Do not assert causation. Suggest a governed backfill plan as next action.",
+  },
+  {
     id: "session-close",
     version: "1.0.0",
     scope: "enterprise",

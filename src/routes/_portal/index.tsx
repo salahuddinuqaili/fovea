@@ -4,7 +4,7 @@ import { ArrowUpRight } from "lucide-react";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { bootstrapFn, overviewFn } from "@/lib/api";
-import { playbooksFor } from "@/lib/playbooks";
+import { playbooksFor, FIRST_RUN } from "@/lib/playbooks";
 import { useFoveaSession } from "@/lib/session";
 import { formatUsd } from "@/lib/utils";
 
@@ -27,7 +27,12 @@ function CommandCenter() {
       <PageHeader
         kicker="Control plane"
         title="Command"
-        description="Fovea is not a chat app. It is the governed operating layer between people, models, warehouses, and production systems. Reads are autonomous. Writes require an exact-hash approval. Sandbox executes after a short-lived credential; production does not."
+        description="Ask a named metric. If Fovea cannot establish the number, it abstains. Writes need an exact-hash approval. New here? Open the operator guide."
+        actions={
+          <Link to="/guide" className="text-sm underline">
+            Operator guide
+          </Link>
+        }
       />
       <div className="grid gap-4 p-4 md:grid-cols-4 md:p-8">
         <Stat label="Autonomy" value="Stage B" hint="Sandbox writes after approval" />
@@ -37,8 +42,32 @@ function CommandCenter() {
           hint={boot.data?.release?.version ?? data?.release?.version ?? "—"}
         />
         <Stat label="Pending approvals" value={String(data?.pendingApprovals.length ?? 0)} hint="Exact-hash bound" />
-        <Stat label="Spend (session)" value={formatUsd(data?.spentUsd ?? 0, 3)} hint="Model + warehouse" />
+        <Stat
+          label="Budget left"
+          value={formatUsd(data?.budgetRemainingUsd ?? 25, 2)}
+          hint={`${formatUsd(data?.spentUsd ?? 0, 3)} spent of ${formatUsd(data?.budgetUsd ?? 25, 0)}`}
+        />
       </div>
+
+      {(data?.allTaskCount ?? 0) === 0 ? (
+        <section className="mx-4 mb-6 rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:mx-8">
+          <h2 className="text-sm font-medium">Start here — four clicks</h2>
+          <ol className="mt-3 grid gap-2 md:grid-cols-2">
+            {FIRST_RUN.map((s) => (
+              <Link
+                key={s.step}
+                to="/work"
+                search={{ q: s.q }}
+                className="rounded-[var(--radius-md)] border border-border bg-bg p-4 hover:border-border-strong"
+              >
+                <div className="text-[11px] uppercase tracking-[0.14em] text-subtle">Step {s.step}</div>
+                <div className="mt-1 text-sm text-fg">{s.title}</div>
+                <div className="mt-1 text-xs text-muted">{s.expect}</div>
+              </Link>
+            ))}
+          </ol>
+        </section>
+      ) : null}
 
       <div className="grid gap-6 px-4 pb-10 md:grid-cols-3 md:px-8">
         <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-5 md:col-span-2">

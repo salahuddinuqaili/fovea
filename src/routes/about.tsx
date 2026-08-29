@@ -17,6 +17,7 @@ const PRINCIPLES = [
 
 const JOURNEYS = [
   { title: "Analyst morning", body: "Vague “revenue” abstains. Named canonical metrics return evidence and provenance." },
+  { title: "Incident afternoon", body: "One question pulls three canonical metrics, notes a failed run, and refuses to claim causation." },
   { title: "Sandbox write", body: "Maya proposes. Jordan approves the exact hash. A short-lived credential executes once; replays are idempotent." },
   { title: "Adversarial day", body: "Prompt injections, README instructions, and cross-user memory probes are refused." },
   { title: "Auditor shift", body: "Riley reads the append-only stream. Maya cannot." },
@@ -39,7 +40,7 @@ function AboutPage() {
         </Link>
       </header>
       <main className="mx-auto max-w-5xl px-5 pb-24">
-        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v2.0</p>
+        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v2.1</p>
         <h1 className="mt-3 max-w-3xl font-display text-5xl leading-tight tracking-tight md:text-7xl">
           Accuracy at the center.
         </h1>
@@ -77,8 +78,9 @@ function AboutPage() {
         <section className="mt-16 rounded-[var(--radius-lg)] border border-border bg-surface p-6">
           <h2 className="font-display text-3xl">Run it</h2>
           <p className="mt-3 max-w-xl text-sm text-muted">
-            Switch demo principals in the header. Ask Maya for north-star revenue. Propose a sandbox write. Approve as
-            Jordan. Unsigned releases will not load. Apache-2.0.
+            Switch demo principals in the header. Ask Maya for north-star revenue, then investigate the dip.
+            Propose a sandbox write. Approve as Jordan. Copy the evidence pack. Unsigned releases will not load.
+            Apache-2.0.
           </p>
           <div className="mt-5 flex flex-wrap gap-3">
             <Link

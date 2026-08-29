@@ -7,6 +7,7 @@ import { useFoveaSession } from "@/lib/session";
 const NAV = [
   { to: "/", label: "Command", hint: "Control plane home" },
   { to: "/work", label: "Work console", hint: "Ask with evidence" },
+  { to: "/guide", label: "Operator guide", hint: "Five-minute first run" },
   { to: "/approvals", label: "Approvals", hint: "Exact-hash decisions" },
   { to: "/tasks", label: "Tasks", hint: "Session history" },
   { to: "/evals", label: "Evaluations", hint: "Golden + adversarial gates" },
