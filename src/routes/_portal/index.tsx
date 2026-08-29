@@ -38,7 +38,7 @@ function CommandCenter() {
         <Stat
           label="Autonomy"
           value="Stage B"
-          hint={`${boot.data?.activeGrants ?? 0} active grants · selected reads continue`}
+          hint={autonomyHint(boot.data?.activeGrants ?? 0, q.data?.coveringGrants, principal?.displayName)}
         />
         <Stat
           label="Release"
@@ -151,6 +151,22 @@ function CommandCenter() {
       </div>
     </div>
   );
+}
+
+function autonomyHint(
+  active: number,
+  covering: { task: string; continuesReads: boolean }[] | undefined,
+  name?: string,
+) {
+  const live = (covering ?? []).find((g) => g.continuesReads);
+  if (live) {
+    const who = name?.split(" ")[0] ?? "this desk";
+    return `${who} · ${live.task} continues`;
+  }
+  if ((covering ?? []).length) {
+    return `${covering!.length} covering this desk · selected workflow only`;
+  }
+  return `${active} active · none covering this desk`;
 }
 
 function Stat({ label, value, hint }: { label: string; value: string; hint: string }) {

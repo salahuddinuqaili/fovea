@@ -1,7 +1,7 @@
 {
   "name": "fovea",
   "private": true,
-  "version": "6.0.0",
+  "version": "7.0.0",
   "license": "Apache-2.0",
   "description": "Agentic OS for data analytics. Accuracy at the center.",
   "sideEffects": false,

@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("6.0.0");
+    const report = await runEvalSuite("7.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,9 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all eleven journeys pass", async () => {
+  it("all twelve journeys pass", async () => {
     const report = await runOperatorSimulations();
-    assert.equal(report.simulations.length, 11);
+    assert.equal(report.simulations.length, 12);
     assert.equal(
       report.passed,
       true,
@@ -410,5 +410,33 @@ describe("v6 grant continuation", () => {
     });
     assert.equal(after.behaviors.includes("grant_chained"), false);
     assert.equal(after.provenance?.queries.length, 1);
+  });
+});
+
+describe("v7 grant desk visible", () => {
+  it("exposes covering grants and short sibling lines only while the grant is active", async () => {
+    const { coveringGrants, grantContinuesReads } = await import("./grants.ts");
+    const store = new KernelStore();
+    assert.equal(coveringGrants(store.state.grants, "prin_maya").length, 0);
+    const issued = await runWork(store, {
+      principalId: "prin_alex",
+      message: "Grant Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(issued.status, "completed");
+    const mine = coveringGrants(store.state.grants, "prin_maya");
+    assert.equal(mine.length, 1);
+    assert.equal(grantContinuesReads(mine[0]), true);
+    const chained = await runWork(store, {
+      principalId: "prin_maya",
+      message: "What was north-star revenue last week?",
+    });
+    assert.equal(chained.behaviors.includes("grant_chained"), true);
+    assert.equal((chained.answer?.text ?? "").includes("Weekly active accounts ·"), true);
+    assert.equal(((chained.answer?.text ?? "").match(/coincides/g) ?? []).length, 1);
+    await runWork(store, {
+      principalId: "prin_alex",
+      message: "Revoke Maya warehouse.query for investigate-metric.",
+    });
+    assert.equal(coveringGrants(store.state.grants, "prin_maya").length, 0);
   });
 });

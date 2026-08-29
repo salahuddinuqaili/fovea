@@ -11,7 +11,7 @@ import type { AutonomyGrant } from "@/kernel/types";
 
 export const Route = createFileRoute("/_portal/policies")({ component: PoliciesPage });
 
-const BUNDLE = `policy_version: 1.4.0
+const BUNDLE = `policy_version: 1.5.0
 autonomy:
   default_stage: B
   global_switch: false
@@ -25,6 +25,7 @@ autonomy:
     self_promote: false
     continue_selected_read: true
     chain_across_tasks: false
+    desk_visible: true
 principles:
   permission_mode: intersection
   abstention_allowed: true
@@ -225,6 +226,12 @@ function GrantCard({
                 ? `Expired ${grant.expiresAt.slice(0, 16).replace("T", " ")} UTC`
                 : `Revoked by ${names[grant.revokedBy ?? ""] ?? grant.revokedBy}`}
           </div>
+          {status === "active" &&
+          grant.tool === "warehouse.query" &&
+          grant.task === "investigate-metric" &&
+          grant.actions.includes("read") ? (
+            <div className="mt-1 text-[11px] text-fg">Continues sibling canonical reads in-task. Not a global switch.</div>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <Badge tone={tone}>{status}</Badge>
@@ -271,7 +278,7 @@ function GrantForm({
         toast.error(res.reason);
         return;
       }
-      toast.success(`Named grant ${res.grant.id} stored. Matching reads may continue. Stage D was not promoted.`);
+      toast.success(`Named grant ${res.grant.id} stored. Switch to the grantee — Work will show it. Stage D was not promoted.`);
       onIssued();
     },
     onError: (e: Error) => toast.error(e.message),

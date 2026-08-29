@@ -53,7 +53,7 @@ function GuidePage() {
             <li>Maya cannot approve her own write. Jordan can, bound to the hash.</li>
             <li>Production tables and backfill execution stay disabled.</li>
             <li>“Enable autonomous mode” — there is no global switch. Grants are per-tool, per-task, per-risk.</li>
-            <li>Maya cannot issue a grant. Switch to Alex Voss or Sam Okonkwo. Duplicates are refused. Revoke ends coverage. An active investigate-metric grant continues Maya’s next named read with sibling canonical queries. The grant never promotes Stage D.</li>
+            <li>Maya cannot issue a grant. Switch to Alex Voss or Sam Okonkwo. Duplicates are refused. Revoke ends coverage. After a grant, Work shows it on Maya’s desk before she asks. Sibling reads continue. The grant never promotes Stage D.</li>
             <li>“Connect the live warehouse” — registered, not on Maya’s allowlist. Fixture stays the read path.</li>
             <li>Another person’s personal notes are never readable.</li>
             <li>Session budget exhausted — close the session or stop spending.</li>

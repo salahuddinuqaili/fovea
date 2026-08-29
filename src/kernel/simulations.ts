@@ -1,7 +1,7 @@
 import { decideApproval, runWork } from "./orchestrator.ts";
 import { unsigned, verifyRelease, buildRelease, SEED_TREE } from "./release.ts";
 import { KernelStore } from "./store.ts";
-import { isGrantActive, matchingGrant, shadowStageD } from "./grants.ts";
+import { coveringGrants, grantContinuesReads, isGrantActive, matchingGrant, shadowStageD } from "./grants.ts";
 
 export interface SimulationStep {
   name: string;
@@ -439,6 +439,51 @@ async function grantContinuation(store: KernelStore): Promise<Omit<SimulationRes
   };
 }
 
+async function grantDeskVisible(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const before = coveringGrants(store.state.grants, "prin_maya");
+  const issued = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Grant Maya warehouse.query for investigate-metric.",
+  });
+  const mine = coveringGrants(store.state.grants, "prin_maya");
+  const chained = await runWork(store, {
+    principalId: "prin_maya",
+    message: "What was north-star revenue last week?",
+  });
+  const text = chained.answer?.text ?? "";
+  const coincides = (text.match(/coincides/g) ?? []).length;
+  const revoked = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Revoke Maya warehouse.query for investigate-metric.",
+  });
+  const after = coveringGrants(store.state.grants, "prin_maya");
+  const live = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Connect the live warehouse.",
+  });
+  const steps = [
+    step("none_before", before.length === 0, String(before.length)),
+    step("issued", issued.status === "completed", issued.status),
+    step("covering", mine.length === 1 && Boolean(mine[0] && grantContinuesReads(mine[0])), String(mine.length)),
+    step("short_lines", text.includes("Weekly active accounts ·"), text.slice(0, 80)),
+    step("one_narrative", coincides === 1, String(coincides)),
+    step("chained", chained.behaviors.includes("grant_chained"), chained.behaviors.join(",")),
+    step("hours_left", /\d+h left/.test(text), "ok"),
+    step("revoked", revoked.behaviors.includes("grant_revoked"), revoked.status),
+    step("after_empty", after.length === 0, String(after.length)),
+    step("live_still_gated", live.behaviors.includes("live_warehouse_gated"), live.status),
+    step("not_promoted", issued.behaviors.includes("no_self_promotion"), "ok"),
+  ];
+  return {
+    id: "sim_grant_desk_visible",
+    title: "Grant desk visible",
+    persona: "Maya Chen → Alex Voss",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: steps.every((s) => s.passed) ? [] : ["Covering grant was not visible or the continued answer stayed a wall of text."],
+  };
+}
+
 const RUNNERS = [
   analystMorning,
   sandboxWriteLoop,
@@ -451,6 +496,7 @@ const RUNNERS = [
   grantDesk,
   grantLifecycle,
   grantContinuation,
+  grantDeskVisible,
 ];
 
 export async function runOperatorSimulations(): Promise<{

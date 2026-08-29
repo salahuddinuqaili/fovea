@@ -80,6 +80,18 @@ export function matchingGrant(
   );
 }
 
+export function coveringGrants(grants: AutonomyGrant[], principalId: string, now = Date.now()): AutonomyGrant[] {
+  return grants.filter((g) => isGrantActive(g, now) && g.principalId === principalId);
+}
+
+export function grantContinuesReads(grant: AutonomyGrant): boolean {
+  return grant.tool === "warehouse.query" && grant.task === "investigate-metric" && grant.actions.includes("read");
+}
+
+export function grantHoursLeft(grant: AutonomyGrant, now = Date.now()): number {
+  return Math.max(0, Math.round((Date.parse(grant.expiresAt) - now) / 3600_000));
+}
+
 export function findGrant(
   grants: AutonomyGrant[],
   sel: { grantId?: string; principalId?: string; tool?: string; task?: string },

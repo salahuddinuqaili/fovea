@@ -10,7 +10,7 @@ import { KernelStore, makePersonalNote } from "./store.ts";
 import { dryRunSql, executeReadSql, lintSql, readRepo, readTicket, wrapToolCall } from "./tools.ts";
 import { validateSandboxWriteSql } from "./sql.ts";
 import { connectLiveWarehouse } from "./warehouse.ts";
-import { findGrant, issueGrant, matchingGrant, parseGrantRequest, parseRevokeRequest, revokeGrant, shadowStageD } from "./grants.ts";
+import { findGrant, grantContinuesReads, grantHoursLeft, issueGrant, matchingGrant, parseGrantRequest, parseRevokeRequest, revokeGrant, shadowStageD } from "./grants.ts";
 import type {
   Approval,
   NextAction,
@@ -702,13 +702,13 @@ async function runMetric(store: KernelStore, ctx: WorkCtx): Promise<Pick<WorkRes
       provenance.metricDefinitions.push(sib.id);
       const sibLast = sibJob.rows[sibJob.rows.length - 1];
       const sibPrev = sibJob.rows[sibJob.rows.length - 2];
-      supporting.push(interpretMetric(sib.id, sibLast, sibPrev));
+      supporting.push(metricLine(sib.id, sibLast, sibPrev));
       citations.push({ label: sib.name, kind: "metric", ref: sib.id });
       citations.push({ label: sibJob.jobId, kind: "query", ref: sibJob.queryHash });
     }
     if (supporting.length) {
       behaviors.push("grant_chained", "no_write_executed", "no_causal_claim");
-      text = `${text}\n\nSupporting reads under the named grant (same skill, same tool, same action — not a causal claim):\n${supporting.map((s) => `• ${s}`).join("\n")}`;
+      text = `${text}\n\nSupporting reads (named grant, not a causal claim):\n${supporting.map((s) => `• ${s}`).join("\n")}`;
     }
   }
 
@@ -966,17 +966,15 @@ function runGrantIssue(
   });
   const shadow = shadowStageD(issued.grant);
   behaviors.push("grant_issued", "no_self_promotion", "no_write_executed");
-  const continues =
-    issued.grant.tool === "warehouse.query" &&
-    issued.grant.task === "investigate-metric" &&
-    issued.grant.actions.includes("read")
-      ? " Matching investigate-metric reads will continue with sibling canonical queries. Writes stay hash-bound."
-      : " It covers the named workflow only. Writes stay hash-bound.";
+  const who = store.principal(issued.grant.principalId)?.displayName ?? issued.grant.principalId;
+  const continues = grantContinuesReads(issued.grant)
+    ? ` Matching investigate-metric reads will continue with sibling canonical queries. Writes stay hash-bound. Switch to ${who} to see the grant on Work before asking.`
+    : " It covers the named workflow only. Writes stay hash-bound.";
   return {
     status: "completed",
     answer: {
       claimClass: "derived",
-      text: `Named grant ${issued.grant.id} stored: ${issued.grant.tool} / ${issued.grant.task} for ${issued.grant.principalId}, max risk T${issued.grant.maxRisk}, actions ${issued.grant.actions.join(", ")}. Expires ${issued.grant.expiresAt}.${continues} Shadow Stage D: eligible=${shadow.eligible}, promoted=${shadow.promoted}. Production execution stays disabled.`,
+      text: `Named grant ${issued.grant.id} stored: ${issued.grant.tool} / ${issued.grant.task} for ${who}, max risk T${issued.grant.maxRisk}, actions ${issued.grant.actions.join(", ")}. Expires in ${grantHoursLeft(issued.grant)}h.${continues} Shadow Stage D: eligible=${shadow.eligible}, promoted=${shadow.promoted}. Production execution stays disabled.`,
       citations: [
         { label: issued.grant.id, kind: "policy", ref: issued.grant.id },
         { label: issued.grant.tool, kind: "policy", ref: issued.grant.tool },
@@ -1038,7 +1036,7 @@ function runGrantRevoke(
     status: "completed",
     answer: {
       claimClass: "derived",
-      text: `Grant ${retracted.grant.id} revoked. ${retracted.grant.tool} / ${retracted.grant.task} for ${retracted.grant.principalId} is no longer an active selected workflow. Stage D was not promoted.`,
+      text: `Grant ${retracted.grant.id} revoked. ${retracted.grant.tool} / ${retracted.grant.task} for ${store.principal(retracted.grant.principalId)?.displayName ?? retracted.grant.principalId} is no longer an active selected workflow. Stage D was not promoted.`,
       citations: [{ label: retracted.grant.id, kind: "policy", ref: retracted.grant.id }],
     },
   };
@@ -1064,11 +1062,13 @@ function applyGrantCoverage(
   if (!hit || !partial.answer) return;
   const chained = behaviors.includes("grant_chained");
   behaviors.push("grant_covers", "no_self_promotion");
+  const hours = grantHoursLeft(hit);
+  const who = store.principal(hit.principalId)?.displayName ?? hit.principalId;
   partial.answer = {
     ...partial.answer,
     text: chained
-      ? `${partial.answer.text}\n\nCovered by named grant ${hit.id} until ${hit.expiresAt}. Selected workflow continued with sibling canonical reads. Writes stay hash-bound. Stage D was not promoted.`
-      : `${partial.answer.text}\n\nCovered by named grant ${hit.id} until ${hit.expiresAt}. Selected workflow only. Stage D was not promoted.`,
+      ? `${partial.answer.text}\n\nCovered by named grant ${hit.id} (${hours}h left). Selected workflow continued with sibling canonical reads for ${who}. Writes stay hash-bound. Stage D was not promoted.`
+      : `${partial.answer.text}\n\nCovered by named grant ${hit.id} (${hours}h left). Selected workflow only. Stage D was not promoted.`,
     citations: [...partial.answer.citations, { label: hit.id, kind: "policy", ref: hit.id }],
   };
 }
@@ -1129,14 +1129,18 @@ function nextActionFor(
       hint: "Follow the evidence to a related canonical metric.",
     };
   }
-  if (status === "completed" && (intent === "grant_issue" || intent === "grant_revoke")) {
+  if (status === "completed" && intent === "grant_issue") {
+    return {
+      label: "Ask north-star as Maya",
+      href: "/work?q=" + encodeURIComponent("What was north-star revenue last week?"),
+      hint: "Switch the header to Maya Chen first. Her named read continues; this is not a global switch.",
+    };
+  }
+  if (status === "completed" && intent === "grant_revoke") {
     return {
       label: "Open policy",
       href: "/policies",
-      hint:
-        intent === "grant_revoke"
-          ? "Grant retracted. It did not promote Stage D."
-          : "Named grant stored. Maya’s next matching read continues in-task. It did not promote Stage D.",
+      hint: "Grant retracted. It did not promote Stage D.",
     };
   }
   if (status === "refused") {
@@ -1240,6 +1244,24 @@ function interpretMetric(id: string, last: Record<string, string | number | bool
     return `Refund rate for week starting ${last.week_start} was ${(rate * 100).toFixed(1)}% (refunded GMV / north-star GMV). The 2026-08-24 week doubled versus the 3% baseline and coincides with the failed fct_orders run.`;
   }
   return "Canonical metric retrieved.";
+}
+
+function metricLine(id: string, last: Record<string, string | number | boolean | null>, _prev?: Record<string, string | number | boolean | null>) {
+  if (id === "northstar_revenue") {
+    return `North-star revenue · ${last.week_start} · $${Number(last.gross_revenue_usd).toLocaleString("en-US")}`;
+  }
+  if (id === "weekly_active_accounts") {
+    return `Weekly active accounts · ${last.week_start} · ${Number(last.weekly_active_accounts).toLocaleString("en-US")}`;
+  }
+  if (id === "order_fill_rate") {
+    const rate = Number(last.fill_rate ?? FILL_RATE.at(-1)?.fill_rate);
+    return `Order fill rate · ${last.week_start} · ${(rate * 100).toFixed(1)}%`;
+  }
+  if (id === "refund_rate") {
+    const rate = Number(last.refund_rate ?? REFUND_RATE.at(-1)?.refund_rate);
+    return `Refund rate · ${last.week_start} · ${(rate * 100).toFixed(1)}%`;
+  }
+  return id;
 }
 
 function extractSql(message: string) {

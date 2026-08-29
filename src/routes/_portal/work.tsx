@@ -41,7 +41,14 @@ function WorkPage() {
     queryFn: () => listTasksFn({ data: { principalId } }),
   });
   const roles = boot.data?.principals.find((p) => p.id === principalId)?.roles ?? ["analyst"];
-  const books = featuredPlaybooks(roles, WORK_STARTERS);
+  const actor = boot.data?.principals.find((p) => p.id === principalId);
+  const covering = overview.data?.coveringGrants ?? [];
+  const liveRead = covering.find((g) => g.continuesReads);
+  const books = featuredPlaybooks(roles, WORK_STARTERS).map((b) =>
+    b.id === "northstar" && liveRead
+      ? { ...b, why: "Covered — sibling canonical reads continue." }
+      : b,
+  );
 
   useEffect(() => {
     setThread([]);
@@ -110,6 +117,15 @@ function WorkPage() {
             Session budget {formatUsd(overview.data?.budgetRemainingUsd ?? 25, 2)} left of{" "}
             {formatUsd(overview.data?.budgetUsd ?? 25, 0)}
           </p>
+          {liveRead ? (
+            <p className="mt-3 rounded-[var(--radius-md)] border border-border-strong bg-surface-2 px-3 py-2 text-sm text-fg">
+              Selected workflow live · {liveRead.task} continues sibling reads. Not a global switch.
+            </p>
+          ) : covering.length ? (
+            <p className="mt-3 rounded-[var(--radius-md)] border border-border bg-surface-2 px-3 py-2 text-sm text-muted">
+              Named grant live · {covering[0].tool} / {covering[0].task}. Selected workflow only.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5 md:px-8">
           {thread.length === 0 ? (
@@ -166,6 +182,10 @@ function WorkPage() {
                   <ClaimBadge cls={item.answer?.claimClass ?? "inferred"} />
                   <Badge>{item.status.replace("_", " ")}</Badge>
                   {item.skillId ? <Badge tone="info">{item.skillId}</Badge> : null}
+                  {item.behaviors.includes("grant_chained") ? <Badge tone="info">continued</Badge> : null}
+                  {item.behaviors.includes("grant_covers") && !item.behaviors.includes("grant_chained") ? (
+                    <Badge>covered</Badge>
+                  ) : null}
                 </div>
                 <p className="whitespace-pre-wrap text-sm leading-relaxed text-fg">{item.answer?.text}</p>
                 {item.nextAction ? (
@@ -218,7 +238,8 @@ function WorkPage() {
           />
           <div className="mt-3 flex items-center justify-between">
             <span className="text-xs text-subtle">
-              Bound to {principalId} · <kbd className="rounded border border-border px-1 py-0.5 font-mono">⌘↵</kbd> run
+              Acting as {actor?.displayName ?? principalId} ·{" "}
+              <kbd className="rounded border border-border px-1 py-0.5 font-mono">⌘↵</kbd> run
             </span>
             <Button type="submit" disabled={mut.isPending || !draft.trim()}>
               Run
@@ -299,17 +320,47 @@ function EvidencePane({
         </div>
       ) : null}
       <Section title="Policy">
-        {result.policy.map((p, i) => (
+        {groupPolicy(result.policy).map((p, i) => (
           <div key={i} className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="font-mono text-xs">{p.decision}</span>
+              <span className="font-mono text-xs">
+                {p.decision}
+                {p.count > 1 ? ` ×${p.count}` : ""}
+              </span>
               <span className="text-[11px] text-subtle">{p.policyVersion}</span>
             </div>
             <p className="mt-1 text-xs text-muted">{p.reason}</p>
           </div>
         ))}
       </Section>
-      {result.sql ? (
+      {result.provenance?.queries.length ? (
+        <Section title={result.provenance.queries.length > 1 ? "Queries" : "Query"}>
+          {result.sql ? (
+            <pre className="overflow-x-auto rounded-[var(--radius-sm)] bg-bg p-3 font-mono text-[11px] leading-relaxed text-muted">
+              {result.sql.query}
+            </pre>
+          ) : null}
+          <ul className="space-y-1.5">
+            {result.provenance.queries.map((q, i) => (
+              <li key={q.jobId} className="rounded-[var(--radius-sm)] border border-border bg-bg px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-fg">
+                    {result.provenance!.metricDefinitions[i]?.replace(/_/g, " ") ?? q.tables[0] ?? q.jobId}
+                    {i === 0 && result.provenance!.queries.length > 1 ? " · primary" : ""}
+                  </span>
+                  <span className="font-mono text-[11px] text-subtle">{q.jobId}</span>
+                </div>
+                <p className="mt-1 font-mono text-[11px] text-muted">{q.tables.join(", ")}</p>
+              </li>
+            ))}
+          </ul>
+          {result.sql ? (
+            <p className="mt-2 text-xs text-muted">
+              Dry-run {result.sql.dryRun.valid ? "valid" : "invalid"} · est. {formatUsd(result.sql.dryRun.estimatedCost, 3)}
+            </p>
+          ) : null}
+        </Section>
+      ) : result.sql ? (
         <Section title="Query">
           <pre className="overflow-x-auto rounded-[var(--radius-sm)] bg-bg p-3 font-mono text-[11px] leading-relaxed text-muted">
             {result.sql.query}
@@ -379,6 +430,19 @@ function EvidencePane({
       </Section>
     </div>
   );
+}
+
+function groupPolicy(policy: WorkResult["policy"]) {
+  const grouped: Array<WorkResult["policy"][number] & { count: number }> = [];
+  for (const p of policy) {
+    const last = grouped[grouped.length - 1];
+    if (last && last.decision === p.decision && last.reason === p.reason) {
+      last.count += 1;
+    } else {
+      grouped.push({ ...p, count: 1 });
+    }
+  }
+  return grouped;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {

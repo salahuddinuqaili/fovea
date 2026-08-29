@@ -56,12 +56,19 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - Work console is this session; durable history stays on Tasks.
 - Ten operator simulations as a release input.
 
-## v6 — Selected workflow continuation (this tree)
+## v6 — Selected workflow continuation
 
 - A covered `investigate-metric` grant continues Maya’s named read with sibling canonical queries in the same task.
 - Without a grant (or after revoke) the metric stays a single query.
 - Writes, backfills, and `warehouse.live` are not continued. Grants do not chain across tasks.
 - Eleven operator simulations as a release input.
+
+## v7 — Desk-visible selected workflows (this tree)
+
+- Covering grants show on the operator’s desk (Command + Work) before they ask.
+- Continued answers stay scannable; Evidence lists every sibling query.
+- There is no global autonomous switch. Stage D stays named, never self-promoted.
+- Twelve operator simulations as a release input.
 
 ## Later — Accounts and a real warehouse DSN
 

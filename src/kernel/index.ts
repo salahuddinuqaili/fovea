@@ -10,7 +10,7 @@ import { tamper, unsigned, verifyRelease } from "./release.ts";
 import { getStore, resetStore, type KernelStore } from "./store.ts";
 import { runEvalSuite } from "./evals.ts";
 import { runOperatorSimulations } from "./simulations.ts";
-import { issueGrant, revokeGrant, findGrant, isGrantActive } from "./grants.ts";
+import { issueGrant, revokeGrant, findGrant, isGrantActive, coveringGrants, grantContinuesReads } from "./grants.ts";
 import { runtimeVerify } from "./kms.ts";
 import { listWarehouseProfiles } from "./warehouse.ts";
 import type { AutonomyGrant, KillSwitchState, SkillManifest } from "./types.ts";
@@ -77,6 +77,14 @@ export function getOverview(principalId: string) {
       team: store.state.memory.filter((m) => m.scope === "team").length,
       personal: store.state.memory.filter((m) => m.scope === "personal" && m.ownerPrincipalId === principalId).length,
     },
+    coveringGrants: coveringGrants(store.state.grants, principalId).map((g) => ({
+      id: g.id,
+      tool: g.tool,
+      task: g.task,
+      actions: g.actions,
+      expiresAt: g.expiresAt,
+      continuesReads: grantContinuesReads(g),
+    })),
   };
 }
 
@@ -155,7 +163,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("6.0.0");
+  return runEvalSuite("7.0.0");
 }
 
 export async function runSimulations() {
@@ -284,5 +292,5 @@ export function retractGrant(
   return retracted;
 }
 
-export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant };
+export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant, coveringGrants, grantContinuesReads };
 export type { KernelStore };
