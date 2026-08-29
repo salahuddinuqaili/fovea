@@ -25,7 +25,7 @@ function SkillsPage() {
           actorId,
           skill: {
             id,
-            version: "0.1.0",
+            version: "1.0.0",
             scope: "personal",
             owner: actorId,
             description: "Personal skill",

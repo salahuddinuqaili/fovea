@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fovea — Agentic OS for data analytics</title>
+    <meta name="description" content="Accuracy at the center. Fovea is an open-source Agentic Operating System for data analytics. Reads are autonomous. Writes are hash-bound. Production stays gated." />
+    <meta name="theme-color" content="#09090B" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #09090b;
+        --surface: #111113;
+        --surface-2: #18181c;
+        --fg: #f2f0ea;
+        --muted: #8f8f98;
+        --subtle: #6b6b73;
+        --border: color-mix(in oklab, var(--fg) 12%, transparent);
+        --accent: #c5cdd6;
+        --accent-fg: #09090b;
+        --ok: #7d9b84;
+        --warn: #c4a574;
+        --danger: #c47a74;
+        --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+        --display: "Instrument Serif", Georgia, serif;
+        --mono: "IBM Plex Mono", ui-monospace, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--sans); }
+      a { color: inherit; }
+      .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+      header { display: flex; align-items: center; justify-content: space-between; padding: 20px 0; }
+      .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+      .brand span { font-family: var(--display); font-size: 28px; }
+      nav { display: flex; gap: 18px; font-size: 13px; color: var(--muted); }
+      nav a { text-decoration: none; }
+      nav a:hover { color: var(--fg); }
+      .btn { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 8px; background: var(--accent); color: var(--accent-fg); text-decoration: none; font-size: 14px; font-weight: 500; }
+      .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--border); }
+      .hero { padding: 72px 0 48px; }
+      .kicker { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--subtle); }
+      h1 { font-family: var(--display); font-size: clamp(48px, 9vw, 88px); line-height: 0.95; letter-spacing: -0.02em; font-weight: 400; margin: 16px 0 0; max-width: 16ch; }
+      .lede { max-width: 62ch; color: var(--muted); font-size: 18px; line-height: 1.6; margin-top: 24px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+      .grid3 { display: grid; gap: 16px; grid-template-columns: repeat(3, 1fr); margin-top: 48px; }
+      .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 22px; }
+      .card .k { font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--subtle); }
+      .card h3 { font-family: var(--display); font-size: 32px; margin: 8px 0 0; font-weight: 400; }
+      .card p { color: var(--muted); font-size: 14px; line-height: 1.5; margin: 10px 0 0; }
+      section { padding: 56px 0; }
+      h2 { font-family: var(--display); font-size: 36px; font-weight: 400; margin: 0 0 24px; }
+      .principles { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+      .principles li { list-style: none; display: flex; gap: 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; font-size: 14px; }
+      .principles ol { margin: 0; padding: 0; display: contents; }
+      .num { font-family: var(--mono); font-size: 11px; color: var(--subtle); }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th { text-align: left; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--subtle); font-weight: 500; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+      td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+      td:first-child { font-weight: 500; }
+      .muted { color: var(--muted); }
+      .journeys { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+      pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 18px; overflow: auto; font-family: var(--mono); font-size: 13px; line-height: 1.6; color: var(--fg); }
+      footer { border-top: 1px solid var(--border); padding: 28px 0 48px; color: var(--muted); font-size: 13px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+      @media (max-width: 800px) {
+        .grid3, .principles, .journeys { grid-template-columns: 1fr; }
+        nav { display: none; }
+        h1 { font-size: 48px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <a class="brand" href="./">
+          <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <circle cx="16" cy="16" r="13.5" stroke="#C5CDD6" stroke-width="1" opacity="0.35" />
+            <circle cx="16" cy="16" r="8.5" stroke="#C5CDD6" stroke-width="1.1" opacity="0.7" />
+            <circle cx="16" cy="16" r="3.2" fill="#C5CDD6" />
+          </svg>
+          <span>Fovea</span>
+        </a>
+        <nav>
+          <a href="#principles">Principles</a>
+          <a href="#journeys">Journeys</a>
+          <a href="#run">Run</a>
+          <a href="https://github.com/salahuddinuqaili/fovea">Source</a>
+        </nav>
+      </header>
+
+      <div class="hero">
+        <div class="kicker">Open-source Agentic OS · Apache-2.0 · v1.1</div>
+        <h1>Accuracy at the center.</h1>
+        <p class="lede">
+          Fovea is the governed operating layer between people, models, warehouses, and production systems.
+          It is not a chat app and not a single model. Agents may read. Writes require an exact action hash.
+          Sandbox executes after a short-lived credential. Production does not.
+        </p>
+        <div class="actions">
+          <a class="btn" href="https://github.com/salahuddinuqaili/fovea">Get the source</a>
+          <a class="btn ghost" href="https://github.com/salahuddinuqaili/fovea/blob/main/README.md">Read the README</a>
+        </div>
+        <div class="grid3">
+          <div class="card">
+            <div class="k">Reads</div>
+            <h3>Autonomous</h3>
+            <p>Named canonical metrics, validated SQL, provenance on every material result.</p>
+          </div>
+          <div class="card">
+            <div class="k">Writes</div>
+            <h3>Hash-bound</h3>
+            <p>Approvals mint a credential scoped to <code>sandbox.*</code>. Replays are idempotent.</p>
+          </div>
+          <div class="card">
+            <div class="k">Policy</div>
+            <h3>Intersection</h3>
+            <p>Lower layers cannot widen. Tool output, READMEs, and tickets are data — not policy.</p>
+          </div>
+        </div>
+      </div>
+
+      <section id="principles">
+        <h2>Principles that will not be reopened casually</h2>
+        <div class="principles">
+          <ol>
+            <li><span class="num">01</span>The OS is the control plane, not the UI.</li>
+            <li><span class="num">02</span>User-invoked permissions use intersection, never union.</li>
+            <li><span class="num">03</span>Personal memory is isolated.</li>
+            <li><span class="num">04</span>Arbitrary tools and plugins are not allowed.</li>
+            <li><span class="num">05</span>Agents cannot deploy their own modifications.</li>
+            <li><span class="num">06</span>Production runs only signed, verified artifacts.</li>
+            <li><span class="num">07</span>Tool output is untrusted data, not policy.</li>
+            <li><span class="num">08</span>Abstention is a success state.</li>
+            <li><span class="num">09</span>Stage progression is evidence-driven.</li>
+          </ol>
+        </div>
+      </section>
+
+      <section id="journeys">
+        <h2>Operator journeys we simulate</h2>
+        <div class="journeys">
+          <article class="card">
+            <div class="k">Maya · analyst</div>
+            <h3 style="font-size:22px">Morning desk</h3>
+            <p>Vague “revenue” abstains. Named canonical metrics return evidence, citations, and a next action.</p>
+          </article>
+          <article class="card">
+            <div class="k">Maya → Jordan</div>
+            <h3 style="font-size:22px">Sandbox write</h3>
+            <p>Proposal binds a hash. Analysts cannot approve. A short-lived credential executes once; replay adds no rows.</p>
+          </article>
+          <article class="card">
+            <div class="k">Adversarial</div>
+            <h3 style="font-size:22px">Injection day</h3>
+            <p>Prompt injections, README instructions, and cross-user memory probes are refused. Unsigned releases cannot load.</p>
+          </article>
+          <article class="card">
+            <div class="k">Riley · auditor</div>
+            <h3 style="font-size:22px">Audit shift</h3>
+            <p>The append-only stream is role-gated. Production backfills remain plan-only in v1.1.</p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <h2>Demo principals</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Person</th>
+              <th>Role</th>
+              <th>Try</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td>Maya Chen</td><td class="muted">Analyst</td><td class="muted">Ask metrics, propose sandbox writes, plan backfills</td></tr>
+            <tr><td>Jordan Hale</td><td class="muted">Approver</td><td class="muted">Decide exact-hash approvals; mint sandbox credentials</td></tr>
+            <tr><td>Sam Okonkwo</td><td class="muted">Security owner</td><td class="muted">Kill switches</td></tr>
+            <tr><td>Riley Park</td><td class="muted">Auditor</td><td class="muted">Audit stream</td></tr>
+            <tr><td>Alex Voss</td><td class="muted">OS owner</td><td class="muted">Evals, simulations, releases</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="run">
+        <h2>Run locally</h2>
+        <pre>git clone https://github.com/salahuddinuqaili/fovea
+cd fovea
+npm install
+npm test
+npm run dev</pre>
+        <p class="muted" style="margin-top:16px">
+          Requires Node 22. Switch demo principals in the header. No account is required.
+          Propose a sandbox write as Maya, approve as Jordan. Production tables stay blocked.
+        </p>
+      </section>
+
+      <footer>
+        <div>Fovea · Apache License 2.0 · Accuracy at the center.</div>
+        <div>
+          <a href="https://github.com/salahuddinuqaili/fovea">github.com/salahuddinuqaili/fovea</a>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

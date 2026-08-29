@@ -2,47 +2,25 @@ import { sha256, uuid } from "./crypto.ts";
 import {
   DOCS,
   FILL_RATE,
+  REFUND_RATE,
   REPO_FILES,
   TICKETS,
   WAA,
   WEEKLY_REVENUE,
   TOOLS,
 } from "./fixtures.ts";
+import { tablesInSql, validateReadSql } from "./sql.ts";
 import type { JsonValue, QueryJob, ToolCall, ToolRecord } from "./types.ts";
 
-const WRITE_SQL =
-  /\b(insert|update|delete|merge|drop|truncate|alter|grant|revoke|copy|create|replace|call|execute)\b/i;
-const SELECT_OK = /^\s*(with\b[\s\S]+)?select\b/i;
+export { tablesInSql, validateReadSql };
 
 export function getTool(id: string): ToolRecord | undefined {
   return TOOLS.find((t) => t.id === id);
 }
 
 export function lintSql(sql: string): { ok: boolean; notes: string[] } {
-  const notes: string[] = [];
-  if (WRITE_SQL.test(sql)) {
-    return { ok: false, notes: ["Write or DDL keywords are not permitted on the read path."] };
-  }
-  if (!SELECT_OK.test(sql)) {
-    return { ok: false, notes: ["Only SELECT (optionally WITH) statements are permitted."] };
-  }
-  if (/into\s+outfile|load_file|pg_read_file/i.test(sql)) {
-    return { ok: false, notes: ["File and export primitives are blocked."] };
-  }
-  notes.push("Parser: SELECT-only.");
-  notes.push("No schema mutation keywords.");
-  return { ok: true, notes };
-}
-
-export function tablesInSql(sql: string): string[] {
-  const found = new Set<string>();
-  const re = /\b(analytics\.\w+|raw\.\w+|finance\.\w+|fct_\w+|mart_\w+|dim_\w+|stg_\w+)/gi;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(sql))) {
-    const raw = m[1].toLowerCase();
-    found.add(raw.includes(".") ? raw : `analytics.${raw}`);
-  }
-  return [...found];
+  const v = validateReadSql(sql);
+  return { ok: v.ok, notes: v.notes };
 }
 
 export function dryRunSql(sql: string): {
@@ -52,8 +30,8 @@ export function dryRunSql(sql: string): {
   notes: string[];
   tables: string[];
 } {
-  const lint = lintSql(sql);
-  const tables = tablesInSql(sql);
+  const lint = validateReadSql(sql);
+  const tables = lint.tables.length ? lint.tables : tablesInSql(sql);
   const scannedBytes = Math.max(8_000_000, tables.length * 42_000_000);
   const estimatedCost = Number(((scannedBytes / 1_000_000_000) * 0.012 + 0.01).toFixed(4));
   return {
@@ -87,6 +65,9 @@ export function executeReadSql(sql: string): QueryJob {
 
 function matchRows(sql: string): Array<Record<string, string | number | boolean | null>> {
   const s = sql.toLowerCase();
+  if (s.includes("refund")) {
+    return REFUND_RATE.map((r) => ({ ...r }));
+  }
   if (s.includes("fill") || s.includes("filled_qty") || s.includes("order_fill")) {
     return FILL_RATE.map((r) => ({ ...r }));
   }

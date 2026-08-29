@@ -2,15 +2,17 @@
 
 This is an **open-source Agentic OS** (name: **Fovea**). Continue in place. Do not scaffold a new app.
 
-## Current version: v0.1.0 — Stage B Trusted Copilot
+## Current version: v1.1.0 — Operator UX + Stage C sandbox writes
 
 Locked defaults:
 
 - Apache-2.0 TypeScript app (TanStack Start portal + `src/kernel` control plane)
 - Auth OFF (demo principal switcher, not Better Auth)
-- Database OFF (in-process store + fixtures)
-- Writes: require_approval, execution disabled
-- Four skills: investigate-metric, write-and-validate-sql, plan-backfill, session-close
+- Database ON (unowned control snapshot via PGLite/Neon; personal memory is in-process only)
+- Principals remain Stage B. Writes require exact-hash approval.
+- Stage C path: sandbox.* writes after approval + short-lived credential. Production execution disabled.
+- Skills: investigate-metric, write-and-validate-sql, plan-backfill, session-close
+- Operator simulations in `src/kernel/simulations.ts` are a release input.
 
 ## Do not reopen
 
@@ -18,15 +20,16 @@ See README “principles” and the original implementation guide. Intersection 
 
 ## Where to edit
 
-- Kernel: `src/kernel/` (policy, orchestrator, evals, tools, release)
+- Kernel: `src/kernel/` (policy, orchestrator, evals, tools, sql, credentials, sandbox, durable, simulations)
 - Portal: `src/routes/_portal/`
+- Persist: `src/lib/control-persist.ts` + `migrations/0002_fovea_control.sql`
 - Invariant tests: `src/kernel/invariants.test.ts`
+- Public site: `docs/`
 - Roadmap: `ROADMAP.md`
 
 ## Next versions (do these, don’t rebuild)
 
-- **v1** — durable store, richer SQL validator, more golden fixtures, personal skill tests, Stage C write path in sandbox only
-- **v2** — real pipeline adapters, approval → short-lived write credential, still no prod backfill exec until gates pass
+- **v2** — real pipeline adapters, approval → short-lived write credential for governed production backfills, still no prod backfill exec until gates pass
 - **v3** — SSO, KMS signing, live warehouse adapter behind policy
 
 Keep the portal on `0.0.0.0:8080` via `npm run dev` and `startup.sh`.

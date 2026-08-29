@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PortalRouteImport } from './routes/_portal'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as PortalIndexRouteImport } from './routes/_portal/index'
 import { Route as PortalApprovalsRouteImport } from './routes/_portal/approvals'
 import { Route as PortalAuditRouteImport } from './routes/_portal/audit'
@@ -29,6 +30,11 @@ import { Route as PortalTasksTaskIdRouteImport } from './routes/_portal/tasks/$t
 
 const PortalRoute = PortalRouteImport.update({
   id: '/_portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalIndexRoute = PortalIndexRouteImport.update({
@@ -114,6 +120,7 @@ const PortalTasksTaskIdRoute = PortalTasksTaskIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof PortalIndexRoute
+  '/about': typeof AboutRoute
   '/approvals': typeof PortalApprovalsRoute
   '/audit': typeof PortalAuditRoute
   '/backfills': typeof PortalBackfillsRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/tasks/': typeof PortalTasksIndexRoute
 }
 export interface FileRoutesByTo {
+  '/about': typeof AboutRoute
   '/approvals': typeof PortalApprovalsRoute
   '/audit': typeof PortalAuditRoute
   '/backfills': typeof PortalBackfillsRoute
@@ -151,6 +159,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_portal': typeof PortalRouteWithChildren
+  '/about': typeof AboutRoute
   '/_portal/approvals': typeof PortalApprovalsRoute
   '/_portal/audit': typeof PortalAuditRoute
   '/_portal/backfills': typeof PortalBackfillsRoute
@@ -172,6 +181,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
     | '/approvals'
     | '/audit'
     | '/backfills'
@@ -189,6 +199,7 @@ export interface FileRouteTypes {
     | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/about'
     | '/approvals'
     | '/audit'
     | '/backfills'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_portal'
+    | '/about'
     | '/_portal/approvals'
     | '/_portal/audit'
     | '/_portal/backfills'
@@ -228,6 +240,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   PortalRoute: typeof PortalRouteWithChildren
+  AboutRoute: typeof AboutRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -237,6 +250,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof PortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_portal/': {
@@ -397,6 +417,7 @@ const PortalRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   PortalRoute: PortalRouteWithChildren,
+  AboutRoute: AboutRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

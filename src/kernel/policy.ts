@@ -134,6 +134,7 @@ export function osPolicySet(): PermissionSet {
       "observability.read",
       "pipeline.graph",
       "pipeline.dry_run",
+      "warehouse.sandbox_write",
     ],
     dataClasses: ["public", "internal", "confidential", "restricted"],
     resources: ["*"],
@@ -162,6 +163,7 @@ export function teamSet(): PermissionSet {
       "observability.read",
       "pipeline.graph",
       "pipeline.dry_run",
+      "warehouse.sandbox_write",
     ],
     dataClasses: ["internal", "confidential"],
     resources: ["dataset/*", "repo/analytics", "issues/*", "docs/*"],
@@ -189,6 +191,7 @@ export function agentSet(): PermissionSet {
       "observability.read",
       "pipeline.graph",
       "pipeline.dry_run",
+      "warehouse.sandbox_write",
     ],
     dataClasses: ["internal", "confidential", "restricted"],
     resources: ["*"],
@@ -302,11 +305,12 @@ export function evaluatePolicy(req: PolicyRequest, ctx: PolicyContext): PolicyRe
     if (req.autonomyStage === "B") {
       return {
         decision: "require_approval",
-        reason: "Stage B: all writes require human approval. Execution remains disabled until Stage C.",
+        reason:
+          "Stage B principals: all writes require human approval. Sandbox execution may proceed only after exact-hash approval and a short-lived credential. Production execution remains disabled.",
         policyVersion: POLICY_VERSION,
         approvalPolicy: "stage_b_all_writes",
         maxTtlSeconds: 900,
-        constraints: { no_schema_changes: true, execution: "disabled_in_stage_b" },
+        constraints: { no_schema_changes: true, execution: "credential_broker", sandbox_only: true },
         effective,
         layers,
       };

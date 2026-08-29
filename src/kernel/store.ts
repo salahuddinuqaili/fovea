@@ -2,6 +2,7 @@ import { uuid } from "./crypto.ts";
 import { ENTERPRISE_SKILLS, findPrincipal, PRINCIPALS } from "./fixtures.ts";
 import { makeMemory, seedMemory } from "./memory.ts";
 import { buildRelease, SEED_TREE } from "./release.ts";
+import { seedSandbox, type SandboxState } from "./sandbox.ts";
 import type {
   Approval,
   AuditEvent,
@@ -14,6 +15,7 @@ import type {
   Session,
   SkillManifest,
   WorkResult,
+  WriteCredential,
 } from "./types.ts";
 import { AGENT_RELEASE, POLICY_VERSION } from "./types.ts";
 
@@ -30,6 +32,8 @@ export interface KernelState {
   releases: ReleaseArtifact[];
   loadedRelease: ReleaseArtifact | null;
   loadError: string | null;
+  credentials: WriteCredential[];
+  sandbox: SandboxState;
 }
 
 export function emptyKill(): KillSwitchState {
@@ -48,8 +52,8 @@ export function emptyKill(): KillSwitchState {
 
 export function seedState(): KernelState {
   const release = buildRelease({
-    version: "0.1.0",
-    sourceCommit: "7f0ea31c8d2b",
+    version: "1.1.0",
+    sourceCommit: "e8a14c9b3f01",
     tree: SEED_TREE,
   });
   return {
@@ -65,6 +69,28 @@ export function seedState(): KernelState {
     releases: [release],
     loadedRelease: release,
     loadError: null,
+    credentials: [],
+    sandbox: seedSandbox(),
+  };
+}
+
+function normalizeState(s: KernelState): KernelState {
+  return {
+    ...s,
+    sessions: s.sessions ?? [],
+    tasks: (s.tasks ?? []).map((t) => ({ ...t, nextAction: t.nextAction ?? null })),
+    events: s.events ?? [],
+    approvals: s.approvals ?? [],
+    memory: s.memory ?? [],
+    costs: s.costs ?? [],
+    improvements: s.improvements ?? [],
+    skills: s.skills ?? [],
+    kill: s.kill ?? emptyKill(),
+    releases: s.releases ?? [],
+    loadedRelease: s.loadedRelease ?? null,
+    loadError: s.loadError ?? null,
+    credentials: s.credentials ?? [],
+    sandbox: s.sandbox ?? seedSandbox(),
   };
 }
 
@@ -72,7 +98,7 @@ export class KernelStore {
   state: KernelState;
 
   constructor(state?: KernelState) {
-    this.state = state ?? seedState();
+    this.state = normalizeState(state ?? seedState());
   }
 
   snapshot(): KernelState {
@@ -170,16 +196,29 @@ export class KernelStore {
   }
 }
 
-const g = globalThis as typeof globalThis & { __foveaStore?: KernelStore };
+const g = globalThis as typeof globalThis & {
+  __foveaStore?: KernelStore;
+  __foveaHydrated?: boolean;
+};
 
 export function getStore(): KernelStore {
   if (!g.__foveaStore) g.__foveaStore = new KernelStore();
+  g.__foveaStore.state = normalizeState(g.__foveaStore.state);
   return g.__foveaStore;
 }
 
 export function resetStore() {
   g.__foveaStore = new KernelStore();
+  g.__foveaHydrated = false;
   return g.__foveaStore;
+}
+
+export function markHydrated(value = true) {
+  g.__foveaHydrated = value;
+}
+
+export function isHydrated() {
+  return Boolean(g.__foveaHydrated);
 }
 
 export function makePersonalNote(principalId: string, title: string, body: string) {

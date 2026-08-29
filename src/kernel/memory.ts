@@ -2,7 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import { uuid } from "./crypto.ts";
 import type { ImprovementEvent, MemoryItem, MemoryScope } from "./types.ts";
 
-const APP_SECRET = "fovea-v0-demo-memory-key-not-for-production";
+const APP_SECRET = "fovea-v1-demo-memory-key-not-for-production";
 
 function keyFor(principalId: string) {
   return createHash("sha256").update(`${APP_SECRET}:${principalId}`).digest();

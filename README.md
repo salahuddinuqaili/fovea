@@ -4,27 +4,47 @@
 
 Fovea is an open-source **Agentic Operating System for data analytics**. It is not a chat application and not a single model. It is the governed control plane between people, models, warehouses, pipelines, memory, and production systems.
 
-v0 ships as **Stage B: Trusted Copilot**. Agents may read and analyze autonomously. Every write requires a human approval bound to an exact action hash, and production execution remains disabled.
+Website: [salahuddinuqaili.github.io/fovea](https://salahuddinuqaili.github.io/fovea/)
 
-## What v0 includes
+v1.1 ships **Stage B principals + a Stage C sandbox write path + an operator UX that was beaten on five simulated desks**. Agents may read and analyze autonomously. Every write requires a human approval bound to an exact action hash. After approval, Fovea mints a short-lived credential and will execute **only** against `sandbox.*`. Production execution stays disabled.
 
-- Identity and session broker (demo principals, opaque IDs)
-- Policy decision point with **intersection** semantics
-- Tool gateway and registry (fixture warehouse, repo, issues, docs, pipelines)
-- Model gateway (deterministic router; optional xAI when configured)
-- Provenance + append-only audit
-- Golden + adversarial eval suite with hard gates
-- Isolated personal / team / org memory
-- Ed25519 signed-release verification (demo keys, not HSM)
-- Internal portal: work console, approvals, evals, kill switch, cost, memory, skills
-- Backfill **planner** (plan + dry-run, never execute)
+## Why this exists
 
-## Non-goals of v0
+Analytics agents fail in predictable ways: they guess metric definitions, treat ticket text as policy, write to production, leak personal notes, and load unsigned artifacts. Fovea makes those failures **hard gates**. Abstention is a success state. A confident wrong number is not.
 
-- Stage C/D autonomous writes
+```
+principal → policy (intersection) → tools / models
+                ↓
+        provenance + audit
+                ↓
+     approval → credential broker → sandbox.* only
+```
+
+The kernel is the product. The portal is a client.
+
+## What v1.1 includes
+
+| Layer | What you get |
+| --- | --- |
+| Identity | Demo principals, opaque IDs, no real SSO |
+| Policy | Intersection PDP. Lower layers cannot widen. |
+| Tools | Fixture warehouse, repo, issues, docs, pipelines, sandbox writes |
+| Models | Deterministic router; optional xAI when configured |
+| Memory | Isolated personal / team / org. Personal notes never hit the durable snapshot. |
+| Writes | Exact-hash approval → short-lived sandbox credential → idempotent execute |
+| Releases | Ed25519 signed artifacts. Unsigned and tampered loads are rejected. |
+| Evals | Golden + adversarial suite. Hard gates cannot be averaged away. |
+| Simulations | Five operator journeys: analyst morning, sandbox loop, adversarial day, auditor shift, backfill plan-only |
+| Portal | Work console, command palette (⌘K), role-aware playbooks, next-action routing |
+| Persist | Unowned control snapshot (PGLite locally, Neon when `DATABASE_URL` is set) |
+
+## Non-goals (still)
+
+- Stage D autonomous production writes
 - Real warehouse adapters
 - Real SSO / KMS / HSM
 - Arbitrary plugin or MCP installation
+- Production backfill execution (v2)
 
 ## Principles that will not be reopened casually
 
@@ -43,36 +63,55 @@ v0 ships as **Stage B: Trusted Copilot**. Agents may read and analyze autonomous
 Requires Node 22.
 
 ```bash
+git clone https://github.com/salahuddinuqaili/fovea
+cd fovea
 npm install
 npm test
 npm run dev
 ```
 
-Switch demo principals in the header. No account is required. Writes stay gated; production execution is disabled.
+Switch demo principals in the header, or press **⌘K** and pick “Act as”. No account is required.
+
+1. As **Maya**, ask `What was north-star revenue last week?`
+2. Ask `How is revenue doing?` and watch it abstain — then take the next action.
+3. Propose `INSERT INTO sandbox.metric_scratch …`
+4. Switch to **Jordan**, approve the exact hash, watch the credential execute once.
+5. Replay: no additional rows.
+6. As **Riley**, open Audit. As Maya, it is denied.
 
 Optional: set `XAI_API_KEY` for freeform analysis. Golden analytical paths stay deterministic either way.
-
-## Repository layout
-
-```
-src/kernel/     control-plane kernel (policy, tools, evals, signing)
-src/routes/     internal web portal
-policies/       Stage B policy bundle
-schemas/        JSON schemas
-```
-
-The kernel is the product. The portal is a client.
 
 ## Demo principals
 
 | Person | Role | Try |
 | --- | --- | --- |
-| Maya Chen | Analyst | Ask metrics, plan backfills |
-| Jordan Hale | Approver | Decide approval objects |
+| Maya Chen | Analyst | Ask metrics, propose sandbox writes, plan backfills |
+| Jordan Hale | Approver | Decide approval objects; mint sandbox credentials |
 | Sam Okonkwo | Security owner | Kill switches |
 | Riley Park | Auditor | Audit stream |
-| Alex Voss | OS owner | Evals and releases |
+| Alex Voss | OS owner | Evals, simulations, releases |
+
+## Repository layout
+
+```
+src/kernel/     control-plane kernel (policy, tools, evals, signing, credentials, simulations)
+src/routes/     internal web portal
+src/lib/        persist, playbooks, server functions
+migrations/     unowned control-plane snapshot (no personal memory)
+policies/       Stage B policy bundle
+docs/           GitHub Pages site
+schemas/        JSON schemas
+```
+
+## Tests
+
+```bash
+npm test            # kernel invariants + eval hard gates + operator simulations
+npm run typecheck
+```
+
+Critical security evals cannot be averaged away. If a hard gate fails, the release recommendation is `blocked`.
 
 ## License
 
-Apache License 2.0. See `LICENSE`.
+Apache License 2.0. See [LICENSE](LICENSE).

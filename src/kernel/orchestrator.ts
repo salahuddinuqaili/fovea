@@ -1,13 +1,16 @@
 import { digestObject, sha256, uuid } from "./crypto.ts";
-import { FILL_RATE, METRICS } from "./fixtures.ts";
+import { FILL_RATE, METRICS, REFUND_RATE } from "./fixtures.ts";
+import { executeApprovedAction, hashProposedAction, type ExecutionReport } from "./credentials.ts";
 import { canReadMemory, toImprovementEvent } from "./memory.ts";
 import { infer, pickModel, xaiAvailable } from "./models.ts";
 import { evaluatePolicy } from "./policy.ts";
 import { parseRange, planBackfill, walk } from "./pipeline.ts";
 import { KernelStore, makePersonalNote } from "./store.ts";
 import { dryRunSql, executeReadSql, lintSql, readRepo, readTicket, wrapToolCall } from "./tools.ts";
+import { validateSandboxWriteSql } from "./sql.ts";
 import type {
   Approval,
+  NextAction,
   PolicyRequest,
   PolicyResponse,
   ProvenanceRecord,
@@ -27,6 +30,7 @@ export type Intent =
   | "injection"
   | "policy_bypass"
   | "write"
+  | "sandbox_write"
   | "backfill"
   | "metric"
   | "sql"
@@ -42,6 +46,7 @@ export function classifyIntent(text: string): Intent {
   if (/bypass|override (the )?policy|as an admin, allow/i.test(t)) return "policy_bypass";
   if (/another user'?s memory|maya'?s (private|personal) (notes|memory)|cross-user/i.test(t)) return "memory_probe";
   if (/backfill|rerun (the )?(last|past|affected)|reprocess partition/i.test(t)) return "backfill";
+  if ((WRITE_ASK.test(t) || /\bwrite .{0,60}sandbox\./i.test(t)) && /\bsandbox\./i.test(t)) return "sandbox_write";
   if (WRITE_ASK.test(t)) return "write";
   const metricHit = METRICS.filter(
     (m) =>
@@ -50,7 +55,7 @@ export function classifyIntent(text: string): Intent {
       t.toLowerCase().includes(m.id),
   );
   if (
-    /north-?star revenue|weekly active accounts|order fill rate/i.test(t) ||
+    /north-?star revenue|weekly active accounts|order fill rate|refund rate/i.test(t) ||
     metricHit.some((m) => m.status === "canonical")
   )
     return "metric";
@@ -169,6 +174,7 @@ export async function runWork(
       behaviors,
       approvals,
       toolCalls,
+      nextAction: nextActionFor(partial.status, intent, approvals),
       createdAt: started,
       finishedAt: new Date().toISOString(),
       status: partial.status,
@@ -234,27 +240,19 @@ export async function runWork(
     });
   }
 
-  if (intent === "write") {
-    const decision = policyFor({
-      action: "execute_write",
-      tool: "warehouse.query",
-      resource: "dataset/table",
-      dataClass: "confidential",
-      estimatedCost: 40,
-    });
-    behaviors.push("write_gated", "no_write_executed");
-    const approval = makeApproval(taskId, principal.id, input.message, ["dataset/table"], 40);
-    store.addApproval(approval);
-    approvals.push(approval);
-    emit("approval.requested", approval.approvalId);
-    return finish({
-      status: "needs_approval",
-      answer: {
-        claimClass: "refusal",
-        text: `Stage B Trusted Copilot will not execute writes. Policy decision: ${decision.decision}. ${decision.reason} An approval object was created and bound to this exact action hash. Even if approved, production execution stays disabled in v0.`,
-        citations: [{ label: "Stage B writes", kind: "policy", ref: "autonomy.B" }],
-      },
-    });
+  if (intent === "write" || intent === "sandbox_write") {
+    return finish(runWriteProposal({
+      intent,
+      message: input.message,
+      principalId: principal.id,
+      taskId,
+      policyFor,
+      approvals,
+      store,
+      emit,
+      behaviors,
+      toolCalls,
+    }));
   }
 
   if (intent === "ambiguous_metric") {
@@ -380,6 +378,135 @@ export async function runWork(
   });
 }
 
+function runWriteProposal(ctx: {
+  intent: Intent;
+  message: string;
+  principalId: string;
+  taskId: string;
+  policyFor: WorkCtx["policyFor"];
+  approvals: Approval[];
+  store: KernelStore;
+  emit: WorkCtx["emit"];
+  behaviors: string[];
+  toolCalls: ToolCall[];
+}): Pick<WorkResult, "status" | "answer" | "sql"> {
+  const extracted = extractSql(ctx.message);
+  const sandboxProbe = validateSandboxWriteSql(extracted);
+  const isSandbox = ctx.intent === "sandbox_write" || sandboxProbe.ok;
+
+  if (isSandbox) {
+    const sqlText = sandboxProbe.ok ? sandboxProbe.normalized : defaultSandboxInsert(ctx.message);
+    const valid = validateSandboxWriteSql(sqlText);
+    if (!valid.ok || !valid.table) {
+      ctx.behaviors.push("sql_rejected", "no_write_executed");
+      ctx.policyFor({ action: "write", tool: "warehouse.sandbox_write" });
+      return {
+        status: "blocked",
+        sql: {
+          query: sqlText,
+          dryRun: { valid: false, scannedBytes: 0, estimatedCost: 0, notes: valid.notes },
+          blocked: valid.notes.join(" "),
+        },
+        answer: {
+          claimClass: "refusal",
+          text: `Sandbox write rejected: ${valid.notes.join(" ")}`,
+          citations: [{ label: "sandbox validator", kind: "policy", ref: "sandbox-write" }],
+        },
+      };
+    }
+    const idempotencyKey = sha256(`${ctx.principalId}|${valid.normalized}|${valid.table}`);
+    const proposed = {
+      kind: "sandbox_write" as const,
+      sql: valid.normalized,
+      table: valid.table,
+      idempotencyKey,
+    };
+    const decision = ctx.policyFor({
+      action: "write",
+      tool: "warehouse.sandbox_write",
+      resource: valid.table,
+      dataClass: "internal",
+      estimatedCost: 0.02,
+    });
+    ctx.behaviors.push("write_gated", "sandbox_write_proposed", "no_prod_write");
+    ctx.toolCalls.push(
+      wrapToolCall(
+        "warehouse.sandbox_write",
+        { sql: valid.normalized, dryRun: true },
+        { table: valid.table, valid: true },
+        { dryRun: true },
+      ),
+    );
+    const approval = makeApproval(
+      ctx.taskId,
+      ctx.principalId,
+      `Sandbox write ${valid.verb ?? "dml"} ${valid.table}`,
+      [valid.table],
+      0.02,
+      digestObject(proposed),
+      {
+        kind: "sandbox_write",
+        sql: valid.normalized,
+        table: valid.table,
+        idempotencyKey,
+      },
+    );
+    ctx.store.addApproval(approval);
+    ctx.approvals.push(approval);
+    ctx.emit("approval.requested", approval.approvalId);
+    return {
+      status: "needs_approval",
+      sql: {
+        query: valid.normalized,
+        dryRun: { valid: true, scannedBytes: 0, estimatedCost: 0.02, notes: valid.notes },
+      },
+      answer: {
+        claimClass: "derived",
+        text: `Sandbox write proposed against ${valid.table}. Policy: ${decision.decision}. Bound to action hash ${approval.proposedActionHash.slice(0, 12)}… An approver must accept this exact hash; Fovea will then mint a short-lived sandbox credential and execute. Production tables (analytics.*) stay out of scope.`,
+        citations: [
+          { label: valid.table, kind: "query", ref: valid.table },
+          { label: "action hash", kind: "policy", ref: approval.proposedActionHash },
+        ],
+      },
+    };
+  }
+
+  const sqlText = /select |insert |update |delete /i.test(ctx.message) ? extracted : ctx.message;
+  ctx.behaviors.push("write_gated", "no_write_executed", "prod_execution_disabled");
+  const decision = ctx.policyFor({
+    action: "execute_write",
+    tool: "warehouse.query",
+    resource: "analytics.fct_orders",
+    dataClass: "confidential",
+    estimatedCost: 40,
+  });
+  const approval = makeApproval(
+    ctx.taskId,
+    ctx.principalId,
+    ctx.message.slice(0, 180),
+    ["analytics.fct_orders"],
+    40,
+    undefined,
+    { kind: "prod_write", sql: sqlText.slice(0, 500), table: "analytics.fct_orders" },
+  );
+  ctx.store.addApproval(approval);
+  ctx.approvals.push(approval);
+  ctx.emit("approval.requested", approval.approvalId);
+  return {
+    status: "needs_approval",
+    answer: {
+      claimClass: "refusal",
+      text: `Production write proposed. Policy decision: ${decision.decision}. ${decision.reason} Approval is bound to hash ${approval.proposedActionHash.slice(0, 12)}… Even after approval, v1 will not mint a production credential or execute against analytics.*. Use sandbox.* for Stage C writes.`,
+      citations: [{ label: "prod writes", kind: "policy", ref: "autonomy.B" }],
+    },
+  };
+}
+
+function defaultSandboxInsert(message: string) {
+  const note = message.replace(/\s+/g, " ").slice(0, 120).replace(/'/g, "");
+  return `INSERT INTO sandbox.metric_scratch (week_start, metric_id, note) VALUES ('2026-08-24', 'order_fill_rate', '${note}')`;
+}
+
 async function runMetric(store: KernelStore, ctx: WorkCtx): Promise<Pick<WorkResult, "status" | "answer" | "sql">> {
   const { policyFor, toolCalls, provenance, behaviors, emit, taskId, message } = ctx;
   const metric =
@@ -391,6 +518,7 @@ async function runMetric(store: KernelStore, ctx: WorkCtx): Promise<Pick<WorkRes
     ) ??
     METRICS.find((m) => /north-?star/.test(message) && m.id === "northstar_revenue") ??
     METRICS.find((m) => /fill rate/.test(message) && m.id === "order_fill_rate") ??
+    METRICS.find((m) => /refund rate/.test(message) && m.id === "refund_rate") ??
     METRICS.find((m) => /active account/.test(message) && m.id === "weekly_active_accounts");
 
   if (!metric || metric.status !== "canonical") {
@@ -530,6 +658,7 @@ function runBackfill(
     plan.targetNodes,
     plan.expectedCost,
     plan.planHash,
+    { kind: "backfill", planHash: plan.planHash },
   );
   store.addApproval(approval);
   approvals.push(approval);
@@ -541,7 +670,7 @@ function runBackfill(
     plan,
     answer: {
       claimClass: "derived",
-      text: `Governed backfill plan ${plan.id} is ready. Targets ${plan.targetNodes.join(", ")} over ${plan.resolvedPartitions.length} partition(s). Downstream impact: ${plan.downstreamImpact.join(", ") || "none"}. Expected cost $${plan.expectedCost.toFixed(2)}. Policy: ${execPol.decision}. Stage B will not execute this plan — approval binds to hash ${plan.planHash.slice(0, 12)}… and execution remains disabled.`,
+      text: `Governed backfill plan ${plan.id} is ready. Targets ${plan.targetNodes.join(", ")} over ${plan.resolvedPartitions.length} partition(s). Downstream impact: ${plan.downstreamImpact.join(", ") || "none"}. Expected cost $${plan.expectedCost.toFixed(2)}. Policy: ${execPol.decision}. Approval binds to hash ${plan.planHash.slice(0, 12)}… Production backfill execution stays disabled in v1.`,
       citations: [
         { label: "backfill plan", kind: "pipeline", ref: plan.id },
         { label: "plan hash", kind: "provenance", ref: plan.planHash },
@@ -594,10 +723,75 @@ function titleFor(intent: Intent, message: string) {
   if (intent === "metric") return "Investigate metric";
   if (intent === "backfill") return "Plan backfill";
   if (intent === "sql") return "Validate SQL";
+  if (intent === "sandbox_write") return "Propose sandbox write";
   if (intent === "session_close") return "Session close";
   if (intent === "injection" || intent === "policy_bypass") return "Policy refusal";
   if (intent === "ambiguous_metric") return "Abstention";
   return message.slice(0, 48) || "Task";
+}
+
+function nextActionFor(
+  status: WorkResult["status"],
+  intent: Intent,
+  approvals: Approval[],
+): NextAction | null {
+  if (status === "needs_approval") {
+    const hash = approvals[0]?.proposedActionHash.slice(0, 12);
+    return {
+      label: "Open approvals",
+      href: "/approvals",
+      hint: hash
+        ? `Bound hash ${hash}… Switch to Jordan Hale (approver) to decide this exact action.`
+        : "An approver must accept the exact action hash. Switch to Jordan Hale.",
+    };
+  }
+  if (status === "abstained") {
+    return {
+      label: "Ask north-star revenue",
+      href: "/work?q=" + encodeURIComponent("What was north-star revenue last week?"),
+      hint: "Name a canonical metric. Fovea will not guess from “revenue”.",
+    };
+  }
+  if (status === "completed" && intent === "metric") {
+    return {
+      label: "Plan the affected backfill",
+      href: "/work?q=" + encodeURIComponent("Backfill the affected partitions after the upstream correction."),
+      hint: "The 2026-08-24 week may be incomplete. Plan, don’t execute.",
+    };
+  }
+  if (status === "completed" && intent === "sql") {
+    return {
+      label: "Inspect refund rate",
+      href: "/work?q=" + encodeURIComponent("What was refund rate last week?"),
+      hint: "Follow the evidence to a related canonical metric.",
+    };
+  }
+  if (status === "refused") {
+    return {
+      label: "Review policy",
+      href: "/policies",
+      hint: "Policy did not move. Untrusted text cannot widen permissions.",
+    };
+  }
+  if (status === "blocked") {
+    return {
+      label: "Write a read-only query",
+      href: "/work?q=" + encodeURIComponent("SQL for weekly active accounts"),
+      hint: "analytics.* writes stay blocked. Try a validated read, or a sandbox.* proposal.",
+    };
+  }
+  if (intent === "session_close") {
+    return {
+      label: "Back to command",
+      href: "/",
+      hint: "Private memory stayed personal. A sanitized improvement was queued.",
+    };
+  }
+  return {
+    label: "Open work console",
+    href: "/work",
+    hint: "Ask a named metric, plan a backfill, or propose a sandbox write.",
+  };
 }
 
 function skillFor(intent: Intent) {
@@ -609,7 +803,7 @@ function skillFor(intent: Intent) {
 }
 
 function resultSkill(id: string | null) {
-  return id ? [`${id}@0.1.0`] : [];
+  return id ? [`${id}@1.0.0`] : [];
 }
 
 function sqlForMetric(id: string) {
@@ -626,6 +820,12 @@ ORDER BY 1`;
 FROM analytics.fct_order_items
 WHERE status = 'completed'
 GROUP BY 1
+ORDER BY 1`;
+  }
+  if (id === "refund_rate") {
+    return `SELECT week_start,
+       refunded_gmv_usd / NULLIF(gross_revenue_usd, 0) AS refund_rate
+FROM analytics.fct_refunds
 ORDER BY 1`;
   }
   return `SELECT DATE_TRUNC('week', order_date)::date AS week_start,
@@ -653,14 +853,19 @@ function interpretMetric(id: string, last: Record<string, string | number | bool
     const rate = Number(last.fill_rate ?? FILL_RATE.at(-1)?.fill_rate);
     return `Order fill rate for week starting ${last.week_start} was ${(rate * 100).toFixed(1)}%. Canonical definition: filled units / ordered units on completed orders. The latest week is below the ~96% baseline.`;
   }
+  if (id === "refund_rate") {
+    const rate = Number(last.refund_rate ?? REFUND_RATE.at(-1)?.refund_rate);
+    return `Refund rate for week starting ${last.week_start} was ${(rate * 100).toFixed(1)}% (refunded GMV / north-star GMV). The 2026-08-24 week doubled versus the 3% baseline and coincides with the failed fct_orders run.`;
+  }
   return "Canonical metric retrieved.";
 }
 
 function extractSql(message: string) {
   const fenced = message.match(/```sql([\s\S]+?)```/i);
   if (fenced) return fenced[1].trim();
-  if (/select /i.test(message)) {
-    const idx = message.toLowerCase().indexOf("select");
+  const verb = message.match(/\b(select|insert|update|delete|merge|with)\b/i);
+  if (verb) {
+    const idx = message.toLowerCase().indexOf(verb[1].toLowerCase());
     return message.slice(idx).trim();
   }
   return sqlForMetric("weekly_active_accounts");
@@ -673,8 +878,10 @@ function makeApproval(
   resources: string[],
   cost: number,
   hash?: string,
+  constraints?: Record<string, string | number | boolean>,
 ): Approval {
-  const proposedActionHash = hash ?? digestObject({ summary, resources, cost });
+  const approvedConstraints = constraints ?? { kind: "prod_write" };
+  const proposedActionHash = hash ?? digestObject({ summary, resources, cost, ...approvedConstraints });
   return {
     approvalId: `apr_${uuid().slice(0, 8)}`,
     taskId,
@@ -689,14 +896,17 @@ function makeApproval(
     decision: "pending",
     approver: null,
     decidedAt: null,
-    approvedConstraints: {},
+    approvedConstraints,
+    executionStatus: "not_executed",
+    executionNote: "",
+    credentialId: null,
   };
 }
 
 export function decideApproval(
   store: KernelStore,
   input: { approvalId: string; actorId: string; decision: "approved" | "denied" },
-) {
+): ExecutionReport {
   const actor = store.principal(input.actorId);
   if (!actor) throw new Error("Unknown principal");
   const approval = store.state.approvals.find((a) => a.approvalId === input.approvalId);
@@ -714,8 +924,61 @@ export function decideApproval(
     });
     throw new Error("Approver role required.");
   }
-  if (approval.decision !== "pending") throw new Error("Approval is no longer pending.");
-  approval.decision = input.decision;
+  if (approval.decision !== "pending") {
+    if (input.decision === "approved" && approval.decision === "approved") {
+      return executeApprovedAction(store, { approvalId: approval.approvalId, actorId: actor.id });
+    }
+    throw new Error("Approval is no longer pending.");
+  }
+  if (input.decision === "denied") {
+    approval.decision = "denied";
+    approval.approver = actor.id;
+    approval.decidedAt = new Date().toISOString();
+    approval.executionStatus = "not_executed";
+    approval.executionNote = "Denied. No write credential will be minted.";
+    store.emit({
+      taskId: approval.taskId,
+      sessionId: null,
+      principalId: actor.id,
+      eventType: "approval.decided",
+      resourceIds: [approval.approvalId],
+      decision: "deny",
+      correlationId: approval.taskId,
+      summary: `denied ${approval.approvalId}`,
+    });
+    return {
+      approval,
+      execution: "denied",
+      credential: null,
+      sandbox: null,
+      note: approval.executionNote,
+    };
+  }
+
+  const reconstructed = hashProposedAction(approval);
+  if (reconstructed !== approval.proposedActionHash) {
+    approval.executionStatus = "blocked_hash_mismatch";
+    approval.executionNote = "Action hash does not match the bound proposal. No credential minted.";
+    store.emit({
+      taskId: approval.taskId,
+      sessionId: null,
+      principalId: actor.id,
+      eventType: "approval.hash_mismatch",
+      resourceIds: [approval.approvalId],
+      decision: "deny",
+      correlationId: approval.taskId,
+      summary: approval.executionNote,
+    });
+    return {
+      approval,
+      execution: "blocked_hash_mismatch",
+      credential: null,
+      sandbox: null,
+      note: approval.executionNote,
+    };
+  }
+
+  approval.decision = "approved";
   approval.approver = actor.id;
   approval.decidedAt = new Date().toISOString();
   store.emit({
@@ -724,18 +987,11 @@ export function decideApproval(
     principalId: actor.id,
     eventType: "approval.decided",
     resourceIds: [approval.approvalId],
-    decision: input.decision === "approved" ? "allow" : "deny",
+    decision: "allow",
     correlationId: approval.taskId,
-    summary: `${input.decision} ${approval.approvalId}`,
+    summary: `approved ${approval.approvalId}`,
   });
-  return {
-    approval,
-    execution: "disabled_in_stage_b" as const,
-    note:
-      input.decision === "approved"
-        ? "Approval bound to the exact action hash. Stage B still will not mint a write credential or execute."
-        : "Denied. No write credential will be minted.",
-  };
+  return executeApprovedAction(store, { approvalId: approval.approvalId, actorId: actor.id });
 }
 
 export function savePersonalSkill(store: KernelStore, principalId: string, skill: SkillManifest) {

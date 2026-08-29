@@ -34,6 +34,16 @@ function TaskDetail() {
         <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-5">
           <h2 className="text-sm font-medium">Answer</h2>
           <p className="mt-3 text-sm leading-relaxed">{t.answer?.text}</p>
+          {t.nextAction ? (
+            <p className="mt-4 text-xs text-muted">
+              Next:{" "}
+              <Link to={t.nextAction.href.split("?")[0] as "/"} className="underline">
+                {t.nextAction.label}
+              </Link>
+              {" — "}
+              {t.nextAction.hint}
+            </p>
+          ) : null}
         </section>
         <section className="rounded-[var(--radius-lg)] border border-border bg-surface p-5">
           <h2 className="text-sm font-medium">Provenance</h2>

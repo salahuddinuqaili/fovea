@@ -16,6 +16,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { useState } from "react";
+import { CommandPalette } from "@/components/command-palette";
 import { FoveaMark } from "@/components/fovea-mark";
 import { Badge } from "@/components/ui/badge";
 import { bootstrapFn } from "@/lib/api";
@@ -121,8 +122,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="border-t border-border p-3">
           <div className="rounded-[var(--radius-md)] border border-border bg-bg px-3 py-2.5">
             <div className="text-[10px] uppercase tracking-[0.14em] text-subtle">Autonomy</div>
-            <div className="mt-1 font-mono text-xs text-fg">Stage B · Trusted Copilot</div>
+            <div className="mt-1 font-mono text-xs text-fg">Stage B · sandbox after approval</div>
           </div>
+          <Link to="/about" className="mt-2 block px-1 py-1 text-[11px] text-subtle hover:text-fg">
+            About this OS
+          </Link>
         </div>
       </aside>
 
@@ -139,6 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {boot.data?.kill.writePlane ? <Badge tone="warn">Writes off</Badge> : null}
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <CommandPalette roles={principal?.roles ?? ["analyst"]} />
             <label className="sr-only" htmlFor="principal">
               Acting as
             </label>

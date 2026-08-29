@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/page-header";
 
 export const Route = createFileRoute("/_portal/policies")({ component: PoliciesPage });
 
-const BUNDLE = `policy_version: 1.0.0
+const BUNDLE = `policy_version: 1.1.0
 autonomy:
   default_stage: B
 principles:
@@ -15,7 +15,8 @@ principles:
 writes:
   B:
     default: require_approval
-    execution: disabled
+    production_execution: disabled
+    sandbox_after_approval: credential_broker
 permanent_human_gate:
   - iam.change
   - protected_dataset.delete
@@ -27,12 +28,13 @@ permanent_human_gate:
   - signing_authority.change
 backfill:
   production:
-    stage_B: plan_only
+    v1: plan_only
 memory:
   personal:
     cross_user_access: deny
     admin_default_access: deny
     automatic_promotion: deny
+    durable_snapshot: omit
 model_judging:
   critical_tasks:
     independent_judge_required: true

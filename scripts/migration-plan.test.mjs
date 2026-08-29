@@ -58,7 +58,15 @@ test("non-.sql entries are dropped (readdir also yields the auth/ directory)", (
 
 test("the auth schema ships outside the globbed directory", () => {
   const migrationsDir = join(projectRoot(), "migrations");
-  assert.deepEqual(pendingMigrations(readdirSync(migrationsDir), []), []);
+  const pending = pendingMigrations(readdirSync(migrationsDir), []);
+  assert.ok(
+    pending.every((p) => p.name !== AUTH_MIGRATION),
+    "0001_auth.sql must not be globbed from migrations/ until the auth skill copies it up",
+  );
+  assert.ok(
+    pending.some((p) => p.name === "0002_fovea_control.sql"),
+    "app control schema is a top-level migration",
+  );
   assert.ok(readdirSync(join(migrationsDir, "auth")).includes("0001_auth.sql"));
 });
 

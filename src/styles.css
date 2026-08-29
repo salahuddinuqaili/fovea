@@ -75,6 +75,11 @@
     outline-offset: 2px;
   }
 
+  kbd {
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+
   ::selection {
     background: color-mix(in oklab, var(--color-accent) 35%, transparent);
     color: var(--color-fg);

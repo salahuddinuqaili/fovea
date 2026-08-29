@@ -144,6 +144,21 @@ export interface ModelRecord {
   status: "approved" | "shadow" | "disabled";
 }
 
+export interface WriteCredential {
+  credentialId: string;
+  approvalId: string;
+  actionHash: string;
+  mintedForPrincipalId: string;
+  mintedBy: string;
+  scope: "sandbox";
+  allowedResources: string[];
+  idempotencyKey: string;
+  expiresAt: string;
+  mintedAt: string;
+  consumedAt: string | null;
+  status: "minted" | "consumed" | "expired" | "revoked";
+}
+
 export interface Approval {
   approvalId: string;
   taskId: string;
@@ -159,6 +174,17 @@ export interface Approval {
   approver: string | null;
   decidedAt: string | null;
   approvedConstraints: Record<string, string | number | boolean>;
+  executionStatus:
+    | "not_executed"
+    | "sandbox_executed"
+    | "sandbox_replayed"
+    | "disabled_prod"
+    | "blocked_hash_mismatch"
+    | "blocked_kill"
+    | "blocked_expired"
+    | "blocked";
+  executionNote: string;
+  credentialId: string | null;
 }
 
 export interface MemoryItem {
@@ -394,6 +420,12 @@ export interface WorkAnswer {
   citations: Citation[];
 }
 
+export interface NextAction {
+  label: string;
+  href: string;
+  hint: string;
+}
+
 export interface WorkResult {
   taskId: string;
   sessionId: string;
@@ -423,6 +455,7 @@ export interface WorkResult {
   behaviors: string[];
   approvals: Approval[];
   toolCalls: ToolCall[];
+  nextAction: NextAction | null;
   createdAt: string;
   finishedAt: string;
 }
@@ -439,6 +472,6 @@ export interface QueryJob {
   dryRun: boolean;
 }
 
-export const AGENT_RELEASE = "fovea-0.1.0";
-export const POLICY_VERSION = "1.0.0";
-export const AGENT_ID = "analytics-investigator@0.1.0";
+export const AGENT_RELEASE = "fovea-1.1.0";
+export const POLICY_VERSION = "1.1.0";
+export const AGENT_ID = "analytics-investigator@1.0.0";

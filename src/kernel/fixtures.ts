@@ -29,6 +29,7 @@ export const PRINCIPALS: Principal[] = [
       "observability.read",
       "pipeline.graph",
       "pipeline.dry_run",
+      "warehouse.sandbox_write",
     ],
     actions: [
       "read",
@@ -59,6 +60,7 @@ export const PRINCIPALS: Principal[] = [
       "observability.read",
       "pipeline.graph",
       "pipeline.dry_run",
+      "warehouse.sandbox_write",
     ],
     actions: [
       "read",
@@ -132,6 +134,7 @@ export const PRINCIPALS: Principal[] = [
       "observability.read",
       "pipeline.graph",
       "pipeline.dry_run",
+      "warehouse.sandbox_write",
     ],
     actions: [
       "read",
@@ -295,6 +298,25 @@ export const TOOLS: ToolRecord[] = [
     status: "approved",
     description: "Dry-run a pipeline node over a partition range.",
   },
+  {
+    id: "warehouse.sandbox_write",
+    owner: "data-platform",
+    riskTier: 3,
+    capabilities: ["write"],
+    dataClasses: ["internal"],
+    authMode: "user_delegation",
+    networkZone: "data",
+    maxCallDurationSeconds: 60,
+    defaultRateLimit: "10/min",
+    supportsDryRun: true,
+    supportsIdempotency: true,
+    outputTrust: "untrusted_data",
+    promptInjectionRisk: "medium",
+    auditRequired: true,
+    status: "approved",
+    description:
+      "Idempotent writes to sandbox.* only. Requires exact-hash approval and a short-lived credential. Production datasets are never in scope.",
+  },
 ];
 
 export const MODELS: ModelRecord[] = [
@@ -376,6 +398,18 @@ export const METRICS: MetricDefinition[] = [
     filters: ["status=completed"],
     sourceTable: "analytics.fct_order_items",
     dataClass: "internal",
+  },
+  {
+    id: "refund_rate",
+    name: "Refund rate",
+    status: "canonical",
+    owner: "ops-analytics",
+    description: "Refunded GMV divided by north-star GMV for completed non-test USD orders.",
+    formula: "sum(refunded_gmv_usd) / nullif(sum(gross_revenue_usd), 0)",
+    grains: ["week"],
+    filters: ["status=completed", "is_test=false", "currency=USD"],
+    sourceTable: "analytics.fct_refunds",
+    dataClass: "confidential",
   },
   {
     id: "booked_revenue",
@@ -530,6 +564,8 @@ export const PIPELINES: PipelineNode[] = [
 ];
 
 export const WEEKLY_REVENUE = [
+  { week_start: "2026-07-13", gross_revenue_usd: 1592100, orders: 20110, accounts: 8740 },
+  { week_start: "2026-07-20", gross_revenue_usd: 1638800, orders: 20840, accounts: 8912 },
   { week_start: "2026-07-27", gross_revenue_usd: 1684410, orders: 21440, accounts: 9120 },
   { week_start: "2026-08-03", gross_revenue_usd: 1748825, orders: 22110, accounts: 9344 },
   { week_start: "2026-08-10", gross_revenue_usd: 1792410, orders: 22680, accounts: 9510 },
@@ -538,6 +574,8 @@ export const WEEKLY_REVENUE = [
 ];
 
 export const WAA = [
+  { week_start: "2026-07-13", weekly_active_accounts: 42880 },
+  { week_start: "2026-07-20", weekly_active_accounts: 43510 },
   { week_start: "2026-07-27", weekly_active_accounts: 44120 },
   { week_start: "2026-08-03", weekly_active_accounts: 45210 },
   { week_start: "2026-08-10", weekly_active_accounts: 46002 },
@@ -546,11 +584,23 @@ export const WAA = [
 ];
 
 export const FILL_RATE = [
+  { week_start: "2026-07-13", ordered_qty: 298400, filled_qty: 286880, fill_rate: 0.961 },
+  { week_start: "2026-07-20", ordered_qty: 304110, filled_qty: 292250, fill_rate: 0.961 },
   { week_start: "2026-07-27", ordered_qty: 310220, filled_qty: 298140, fill_rate: 0.961 },
   { week_start: "2026-08-03", ordered_qty: 318440, filled_qty: 305700, fill_rate: 0.96 },
   { week_start: "2026-08-10", ordered_qty: 324100, filled_qty: 311560, fill_rate: 0.961 },
   { week_start: "2026-08-17", ordered_qty: 331880, filled_qty: 318900, fill_rate: 0.961 },
   { week_start: "2026-08-24", ordered_qty: 286540, filled_qty: 251080, fill_rate: 0.876 },
+];
+
+export const REFUND_RATE = [
+  { week_start: "2026-07-13", gross_revenue_usd: 1592100, refunded_gmv_usd: 47760, refund_rate: 0.03 },
+  { week_start: "2026-07-20", gross_revenue_usd: 1638800, refunded_gmv_usd: 49164, refund_rate: 0.03 },
+  { week_start: "2026-07-27", gross_revenue_usd: 1684410, refunded_gmv_usd: 50532, refund_rate: 0.03 },
+  { week_start: "2026-08-03", gross_revenue_usd: 1748825, refunded_gmv_usd: 52465, refund_rate: 0.03 },
+  { week_start: "2026-08-10", gross_revenue_usd: 1792410, refunded_gmv_usd: 53772, refund_rate: 0.03 },
+  { week_start: "2026-08-17", gross_revenue_usd: 1847220, refunded_gmv_usd: 55417, refund_rate: 0.03 },
+  { week_start: "2026-08-24", gross_revenue_usd: 1510880, refunded_gmv_usd: 90653, refund_rate: 0.06 },
 ];
 
 export const REPO_FILES: Record<string, { commit: string; path: string; body: string }> = {
@@ -618,7 +668,7 @@ export const DOCS = [
 export const ENTERPRISE_SKILLS: SkillManifest[] = [
   {
     id: "investigate-metric",
-    version: "0.1.0",
+    version: "1.0.0",
     scope: "enterprise",
     owner: "org",
     description: "Locate the canonical definition, retrieve evidence, answer with provenance.",
@@ -630,7 +680,7 @@ export const ENTERPRISE_SKILLS: SkillManifest[] = [
   },
   {
     id: "write-and-validate-sql",
-    version: "0.1.0",
+    version: "1.0.0",
     scope: "enterprise",
     owner: "org",
     description: "Generate, lint, dry-run, execute read-only, validate.",
@@ -641,10 +691,10 @@ export const ENTERPRISE_SKILLS: SkillManifest[] = [
   },
   {
     id: "plan-backfill",
-    version: "0.1.0",
+    version: "1.0.0",
     scope: "enterprise",
     owner: "org",
-    description: "Generate a governed backfill plan. Never execute in Stage B.",
+    description: "Generate a governed backfill plan. Production execution stays disabled in v1.",
     allowedTools: ["pipeline.graph", "pipeline.dry_run", "observability.read", "warehouse.dry_run"],
     requestedPermissions: ["read", "plan", "propose_write"],
     dataClasses: ["internal", "confidential"],
@@ -652,7 +702,7 @@ export const ENTERPRISE_SKILLS: SkillManifest[] = [
   },
   {
     id: "session-close",
-    version: "0.1.0",
+    version: "1.0.0",
     scope: "enterprise",
     owner: "org",
     description: "Private continuity plus a sanitized OS-improvement signal.",

@@ -10,7 +10,7 @@ export function buildRelease(input: {
 }): ReleaseArtifact {
   const treeHash = digestObject(input.tree);
   const policyHash = sha256(POLICY_VERSION);
-  const evalSuiteHash = sha256("evals:v0.1.0");
+  const evalSuiteHash = sha256("evals:v1.0.0");
   const artifactDigest = sha256(`${input.version}|${input.sourceCommit}|${treeHash}|${policyHash}|${evalSuiteHash}`);
   const signature = signDigest(artifactDigest);
   return {
@@ -59,7 +59,7 @@ export function unsigned(release: ReleaseArtifact): ReleaseArtifact {
 }
 
 export const SEED_TREE = {
-  kernel: "fovea-0.1.0",
+  kernel: "fovea-1.0.0",
   policies: POLICY_VERSION,
-  evals: "v0.1.0",
+  evals: "v1.0.0",
 };

@@ -1,4 +1,5 @@
 import { MODELS, TOOLS } from "./fixtures.ts";
+import { executeApprovedAction } from "./credentials.ts";
 import { canReadMemory } from "./memory.ts";
 import { listModels, xaiAvailable } from "./models.ts";
 import { decideApproval, runWork, savePersonalSkill } from "./orchestrator.ts";
@@ -7,6 +8,7 @@ import { listNodes } from "./pipeline.ts";
 import { tamper, unsigned, verifyRelease } from "./release.ts";
 import { getStore, resetStore, type KernelStore } from "./store.ts";
 import { runEvalSuite } from "./evals.ts";
+import { runOperatorSimulations } from "./simulations.ts";
 import type { KillSwitchState, SkillManifest } from "./types.ts";
 import { AGENT_RELEASE, POLICY_VERSION } from "./types.ts";
 
@@ -89,6 +91,10 @@ export function resolveApproval(approvalId: string, actorId: string, decision: "
   return decideApproval(getStore(), { approvalId, actorId, decision });
 }
 
+export function executeApproved(approvalId: string, actorId: string) {
+  return executeApprovedAction(getStore(), { approvalId, actorId });
+}
+
 export function listAudit(actorId: string) {
   const p = getStore().principal(actorId);
   if (!p?.actions.includes("audit.read") && !p?.roles.includes("auditor") && !p?.roles.includes("security_owner")) {
@@ -127,7 +133,11 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("0.1.0");
+  return runEvalSuite("1.1.0");
+}
+
+export async function runSimulations() {
+  return runOperatorSimulations();
 }
 
 export function setKill(actorId: string, patch: Partial<KillSwitchState>) {
@@ -176,7 +186,7 @@ export function health() {
   const store = getStore();
   return {
     os: store.state.kill.entireOs ? "disabled" : "up",
-    writePlane: store.state.kill.writePlane ? "disabled" : "gated_stage_b",
+    writePlane: store.state.kill.writePlane ? "disabled" : "gated_sandbox_after_approval",
     models: MODELS.map((m) => ({
       alias: m.alias,
       status: store.state.kill.models.includes(m.alias) ? "disabled" : m.status,
@@ -189,8 +199,10 @@ export function health() {
     verification: store.state.loadedRelease ? verifyRelease(store.state.loadedRelease) : null,
     pendingApprovals: store.state.approvals.filter((a) => a.decision === "pending").length,
     eventCount: store.state.events.length,
+    sandboxWrites: store.state.sandbox.writes.length,
+    credentials: store.state.credentials.length,
   };
 }
 
-export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore };
+export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations };
 export type { KernelStore };
