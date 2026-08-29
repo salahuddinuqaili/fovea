@@ -7,7 +7,7 @@ import {
   verify as nodeVerify,
 } from "node:crypto";
 
-/** Demo signing material. v0 uses an embedded keypair. v1 replaces this with KMS/HSM. */
+/** Demo signing material. Held by the demo KMS (`src/kernel/kms.ts`). Not exportable at runtime. */
 export const DEMO_PRIVATE_PEM = `-----BEGIN PRIVATE KEY-----
 MC4CAQAwBQYDK2VwBCIEIFZ99/KoiHLZtxzDCyQ+2O3UYixlRuSg2T3bN/EzHB21
 -----END PRIVATE KEY-----`;

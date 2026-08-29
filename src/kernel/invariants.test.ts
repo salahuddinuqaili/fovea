@@ -139,7 +139,7 @@ describe("durable snapshot strips personal memory", () => {
 
 describe("eval suite", () => {
   it("passes hard gates", async () => {
-    const report = await runEvalSuite("2.1.0");
+    const report = await runEvalSuite("3.0.0");
     assert.equal(report.hardGatesPassed, true, JSON.stringify(report.cases.filter((c) => !c.passed), null, 2));
     assert.equal(report.recommendation, "eligible_for_review");
   });
@@ -183,9 +183,9 @@ describe("sandbox write after approval", () => {
 });
 
 describe("operator simulations", () => {
-  it("all six journeys pass", async () => {
+  it("all eight journeys pass", async () => {
     const report = await runOperatorSimulations();
-    assert.equal(report.simulations.length, 6);
+    assert.equal(report.simulations.length, 8);
     assert.equal(
       report.passed,
       true,
@@ -241,5 +241,54 @@ describe("incident brief and budget", () => {
     });
     assert.equal(r.status, "blocked");
     assert.equal(r.behaviors.includes("budget_exhausted"), true);
+  });
+});
+
+describe("v3 kms grants and live warehouse", () => {
+  it("refuses a global autonomy switch", async () => {
+    const store = new KernelStore();
+    const r = await runWork(store, {
+      principalId: "prin_maya",
+      message: "Enable autonomous mode for everyone.",
+    });
+    assert.equal(r.status, "refused");
+    assert.equal(r.behaviors.includes("no_global_autonomy"), true);
+  });
+
+  it("gates the live warehouse and keeps writes disabled", async () => {
+    const store = new KernelStore();
+    const r = await runWork(store, {
+      principalId: "prin_maya",
+      message: "Connect the live warehouse.",
+    });
+    assert.equal(r.status, "refused");
+    assert.equal(r.behaviors.includes("live_warehouse_gated"), true);
+  });
+
+  it("rejects wildcard grants and does not promote Stage D", async () => {
+    const { issueGrant, shadowStageD } = await import("./grants.ts");
+    const { autonomySet } = await import("./policy.ts");
+    const store = new KernelStore();
+    const alex = store.principal("prin_alex")!;
+    const wild = issueGrant(alex, {
+      principalId: "prin_maya",
+      tool: "*",
+      task: "investigate-metric",
+      actions: ["read"],
+      maxRisk: 2,
+    });
+    assert.equal(wild.ok, false);
+    const named = issueGrant(alex, {
+      principalId: "prin_maya",
+      tool: "warehouse.query",
+      task: "investigate-metric",
+      actions: ["read"],
+      maxRisk: 2,
+    });
+    assert.equal(named.ok, true);
+    if (named.ok) {
+      assert.equal(shadowStageD(named.grant).promoted, false);
+    }
+    assert.equal(autonomySet("D").tools.includes("*"), false);
   });
 });

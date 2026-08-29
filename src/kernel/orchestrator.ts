@@ -9,6 +9,7 @@ import { parseRange, planBackfill, walk } from "./pipeline.ts";
 import { KernelStore, makePersonalNote } from "./store.ts";
 import { dryRunSql, executeReadSql, lintSql, readRepo, readTicket, wrapToolCall } from "./tools.ts";
 import { validateSandboxWriteSql } from "./sql.ts";
+import { connectLiveWarehouse } from "./warehouse.ts";
 import type {
   Approval,
   NextAction,
@@ -39,14 +40,24 @@ export type Intent =
   | "memory_probe"
   | "session_close"
   | "incident"
+  | "autonomy_switch"
+  | "live_warehouse"
   | "general";
 
 export function classifyIntent(text: string): Intent {
   const t = text.trim();
   if (/session[- ]close|wrap up (this )?session|close (the )?session/i.test(t)) return "session_close";
   if (INJECTION.test(t) || /ignore fovea policy/i.test(t)) return "injection";
+  if (
+    /enable autonomous|autonomous mode|turn on (stage )?d\b|global autonomy|set (everyone|all principals) autonomous|make (the )?os autonomous/i.test(
+      t,
+    )
+  )
+    return "autonomy_switch";
   if (/bypass|override (the )?policy|as an admin, allow/i.test(t)) return "policy_bypass";
   if (/another user'?s memory|maya'?s (private|personal) (notes|memory)|cross-user/i.test(t)) return "memory_probe";
+  if (/connect (the )?(live|production) warehouse|query (the )?live warehouse|arm live (warehouse|dsn)/i.test(t))
+    return "live_warehouse";
   if (/backfill|rerun (the )?(last|past|affected)|reprocess partition/i.test(t)) return "backfill";
   if ((WRITE_ASK.test(t) || /\bwrite .{0,60}sandbox\./i.test(t)) && /\bsandbox\./i.test(t)) return "sandbox_write";
   if (WRITE_ASK.test(t)) return "write";
@@ -334,6 +345,42 @@ export async function runWork(
 
   if (intent === "session_close") {
     return finish(runSessionClose(store, principal.id, taskId, session.sessionId, behaviors, emit));
+  }
+
+  if (intent === "autonomy_switch") {
+    behaviors.push("no_global_autonomy", "refused_policy", "no_write_executed");
+    policyFor({ action: "autonomy.global", tool: "none", task: "autonomy.global" });
+    return finish({
+      status: "refused",
+      answer: {
+        claimClass: "refusal",
+        text: "Refused. There is no global autonomous switch. Stage D, if it ever happens, is a selected workflow: one principal, one tool, one task, a risk ceiling. Wildcards are denied. Production execution stays disabled.",
+        citations: [{ label: "INV-stage-d", kind: "policy", ref: "autonomy.global" }],
+      },
+    });
+  }
+
+  if (intent === "live_warehouse") {
+    const pol = policyFor({
+      action: "read",
+      tool: "warehouse.live",
+      resource: "warehouse/live",
+      dataClass: "confidential",
+    });
+    const attempt = connectLiveWarehouse(pol);
+    behaviors.push("live_warehouse_gated", "no_write_executed");
+    if (pol.decision === "deny") behaviors.push("refused_policy");
+    return finish({
+      status: "refused",
+      answer: {
+        claimClass: "refusal",
+        text: `Live warehouse was not armed. ${attempt.reason} Fixture reads stay available for named canonical metrics. Writes remain hash-bound to sandbox.* only.`,
+        citations: [
+          { label: "warehouse.live", kind: "policy", ref: "warehouse.live" },
+          { label: attempt.profile.id, kind: "pipeline", ref: attempt.profile.mode },
+        ],
+      },
+    });
   }
 
   if (intent === "incident") {
@@ -810,6 +857,8 @@ function titleFor(intent: Intent, message: string) {
   if (intent === "sql") return "Validate SQL";
   if (intent === "sandbox_write") return "Propose sandbox write";
   if (intent === "incident") return "Incident brief";
+  if (intent === "autonomy_switch") return "Autonomy switch refused";
+  if (intent === "live_warehouse") return "Live warehouse gated";
   if (intent === "session_close") return "Session close";
   if (intent === "injection" || intent === "policy_bypass") return "Policy refusal";
   if (intent === "ambiguous_metric") return "Abstention";
@@ -854,9 +903,15 @@ function nextActionFor(
   }
   if (status === "refused") {
     return {
-      label: "Review policy",
-      href: "/policies",
-      hint: "Policy did not move. Untrusted text cannot widen permissions.",
+      label: intent === "live_warehouse" ? "Ask north-star revenue" : "Review policy",
+      href:
+        intent === "live_warehouse"
+          ? "/work?q=" + encodeURIComponent("What was north-star revenue last week?")
+          : "/policies",
+      hint:
+        intent === "live_warehouse"
+          ? "The live adapter stayed dark. Named metrics still run on the fixture."
+          : "Policy did not move. There is no global autonomous switch.",
     };
   }
   if (status === "blocked") {

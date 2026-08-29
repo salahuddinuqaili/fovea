@@ -7,6 +7,7 @@ import type {
   Principal,
 } from "./types.ts";
 import { POLICY_VERSION } from "./types.ts";
+import { TOOLS } from "./fixtures.ts";
 
 export const PERMANENT_HUMAN_GATES = new Set([
   "iam.change",
@@ -20,6 +21,7 @@ export const PERMANENT_HUMAN_GATES = new Set([
   "tool.install",
   "self_modify.deploy",
   "audit.disable",
+  "autonomy.global",
 ]);
 
 export const WRITE_ACTIONS = new Set([
@@ -135,6 +137,7 @@ export function osPolicySet(): PermissionSet {
       "pipeline.graph",
       "pipeline.dry_run",
       "warehouse.sandbox_write",
+      "warehouse.live",
     ],
     dataClasses: ["public", "internal", "confidential", "restricted"],
     resources: ["*"],
@@ -198,26 +201,58 @@ export function agentSet(): PermissionSet {
   };
 }
 
+const GOVERNED_TOOLS = [
+  "warehouse.query",
+  "warehouse.dry_run",
+  "repo.read",
+  "issues.read",
+  "docs.read",
+  "observability.read",
+  "pipeline.graph",
+  "pipeline.dry_run",
+  "warehouse.sandbox_write",
+];
+
+/** Stage never installs a tool wildcard or a global execute_write. */
 export function autonomySet(stage: AutonomyStage): PermissionSet {
   if (stage === "D") {
     return {
-      actions: ["read", "analyze", "plan", "propose_write", "write", "execute_write"],
-      tools: ["*"],
-      dataClasses: ["public", "internal", "confidential", "restricted"],
+      actions: ["read", "analyze", "plan", "propose_write"],
+      tools: [...GOVERNED_TOOLS],
+      dataClasses: ["public", "internal", "confidential"],
       resources: ["*"],
     };
   }
   if (stage === "C") {
     return {
-      actions: ["read", "analyze", "plan", "propose_write", "write"],
-      tools: ["*"],
+      actions: ["read", "analyze", "plan", "propose_write"],
+      tools: [...GOVERNED_TOOLS],
       dataClasses: ["public", "internal", "confidential"],
       resources: ["*"],
     };
   }
   return {
     actions: ["read", "analyze", "plan", "propose_write"],
-    tools: ["*"],
+    tools: [...GOVERNED_TOOLS],
+    dataClasses: ["public", "internal", "confidential", "restricted"],
+    resources: ["*"],
+  };
+}
+
+export function toolRiskSet(toolId: string): PermissionSet {
+  const tool = TOOLS.find((t) => t.id === toolId);
+  if (!tool) {
+    return { actions: [], tools: [], dataClasses: [], resources: [] };
+  }
+  const actions =
+    tool.riskTier >= 4
+      ? ["read", "analyze", "plan"]
+      : tool.riskTier >= 3
+        ? ["read", "analyze", "plan", "propose_write"]
+        : ["read", "analyze", "plan", "propose_write", "write"];
+  return {
+    actions,
+    tools: [tool.id],
     dataClasses: ["public", "internal", "confidential", "restricted"],
     resources: ["*"],
   };
@@ -227,7 +262,7 @@ export function environmentSet(env: string): PermissionSet {
   if (env === "prod") {
     return {
       actions: ["read", "analyze", "plan", "propose_write", "write", "execute_write", "approve"],
-      tools: ["*"],
+      tools: [...GOVERNED_TOOLS, "warehouse.live"],
       dataClasses: ["internal", "confidential", "restricted"],
       resources: ["*"],
     };
@@ -253,6 +288,14 @@ export function evaluatePolicy(req: PolicyRequest, ctx: PolicyContext): PolicyRe
     return deny(emptySet(), [], "Kill switch: entire Agentic OS is disabled.");
   }
 
+  if (req.action === "autonomy.global" || req.task === "autonomy.global" || req.tool === "*") {
+    return deny(
+      emptySet(),
+      [],
+      "There is no global autonomous switch. Permissions are per-tool, per-task, and per-risk. A wildcard cannot be granted.",
+    );
+  }
+
   const layers: { name: string; set: PermissionSet }[] = [
     { name: "enterprise", set: enterpriseSet() },
     { name: "signed_os_policy", set: osPolicySet() },
@@ -262,6 +305,9 @@ export function evaluatePolicy(req: PolicyRequest, ctx: PolicyContext): PolicyRe
     { name: "autonomy", set: autonomySet(req.autonomyStage) },
     { name: "environment", set: environmentSet(req.environment) },
   ];
+  if (req.tool && req.tool !== "none") {
+    layers.push({ name: "tool_risk", set: toolRiskSet(req.tool) });
+  }
 
   const effective = intersectPermissionSets(layers.map((l) => l.set));
 

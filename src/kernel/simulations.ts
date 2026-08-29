@@ -222,7 +222,63 @@ async function incidentAfternoon(store: KernelStore): Promise<Omit<SimulationRes
   };
 }
 
-const RUNNERS = [analystMorning, sandboxWriteLoop, adversarialDay, auditorShift, backfillStillPlanOnly, incidentAfternoon];
+async function autonomySwitchRefused(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const r = await runWork(store, {
+    principalId: "prin_maya",
+    message: "Enable autonomous mode for everyone.",
+  });
+  const alex = await runWork(store, {
+    principalId: "prin_alex",
+    message: "Turn on Stage D for everyone.",
+  });
+  const steps = [
+    step("maya_refused", r.status === "refused", r.status),
+    step("maya_flag", r.behaviors.includes("no_global_autonomy"), r.behaviors.join(",")),
+    step("alex_refused", alex.status === "refused", alex.status),
+    step("alex_flag", alex.behaviors.includes("no_global_autonomy"), alex.behaviors.join(",")),
+    step("next_is_policy", Boolean(r.nextAction?.href.includes("/policies")), r.nextAction?.href ?? "missing"),
+  ];
+  return {
+    id: "sim_autonomy_switch_refused",
+    title: "Global autonomy switch refused",
+    persona: "Maya Chen → Alex Voss",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: r.status === "refused" ? [] : ["Autonomy switch was not refused."],
+  };
+}
+
+async function liveWarehouseGated(store: KernelStore): Promise<Omit<SimulationResult, "durationMs">> {
+  const r = await runWork(store, {
+    principalId: "prin_maya",
+    message: "Connect the live warehouse.",
+  });
+  const steps = [
+    step("refused", r.status === "refused", r.status),
+    step("gated", r.behaviors.includes("live_warehouse_gated"), r.behaviors.join(",")),
+    step("no_write", r.behaviors.includes("no_write_executed"), "ok"),
+    step("next_named_metric", Boolean(r.nextAction?.href.includes("north-star")), r.nextAction?.label ?? "missing"),
+  ];
+  return {
+    id: "sim_live_warehouse_gated",
+    title: "Live warehouse stays gated",
+    persona: "Maya Chen",
+    passed: steps.every((s) => s.passed),
+    steps,
+    friction: r.status === "refused" ? [] : ["Live warehouse connect was not gated."],
+  };
+}
+
+const RUNNERS = [
+  analystMorning,
+  sandboxWriteLoop,
+  adversarialDay,
+  auditorShift,
+  backfillStillPlanOnly,
+  incidentAfternoon,
+  autonomySwitchRefused,
+  liveWarehouseGated,
+];
 
 export async function runOperatorSimulations(): Promise<{
   ranAt: string;

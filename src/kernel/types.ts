@@ -73,6 +73,20 @@ export interface PermissionSet {
   resources: string[];
 }
 
+/** Named Stage D workflow. Never tool=*, never a global autonomy switch. */
+export interface AutonomyGrant {
+  id: string;
+  principalId: string;
+  tool: string;
+  task: string;
+  actions: string[];
+  maxRisk: RiskTier;
+  environment: Environment;
+  issuedBy: string;
+  issuedAt: string;
+  expiresAt: string;
+}
+
 export interface PolicyRequest {
   principalId: string;
   agent: string;
@@ -401,6 +415,8 @@ export interface ReleaseArtifact {
   artifactDigest: string;
   signature: string;
   signer: string;
+  keyId: string;
+  algorithm: "Ed25519";
   revoked: boolean;
 }
 
@@ -510,6 +526,6 @@ export interface QueryJob {
   dryRun: boolean;
 }
 
-export const AGENT_RELEASE = "fovea-2.1.0";
-export const POLICY_VERSION = "1.1.0";
+export const AGENT_RELEASE = "fovea-3.0.0";
+export const POLICY_VERSION = "1.2.0";
 export const AGENT_ID = "analytics-investigator@1.0.0";

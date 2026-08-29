@@ -10,7 +10,10 @@ import { tamper, unsigned, verifyRelease } from "./release.ts";
 import { getStore, resetStore, type KernelStore } from "./store.ts";
 import { runEvalSuite } from "./evals.ts";
 import { runOperatorSimulations } from "./simulations.ts";
-import type { KillSwitchState, SkillManifest } from "./types.ts";
+import { issueGrant } from "./grants.ts";
+import { runtimeVerify } from "./kms.ts";
+import { listWarehouseProfiles } from "./warehouse.ts";
+import type { AutonomyGrant, KillSwitchState, SkillManifest } from "./types.ts";
 import { AGENT_RELEASE, POLICY_VERSION } from "./types.ts";
 
 export function bootstrap() {
@@ -39,6 +42,9 @@ export function bootstrap() {
     models: listModels(),
     pipelines: listNodes(),
     adapters: listAdapters(),
+    warehouses: listWarehouseProfiles(),
+    kms: runtimeVerify(),
+    grants: store.state.grants,
     skillCount: store.state.skills.length,
     taskCount: store.state.tasks.length,
     pendingApprovals: store.state.approvals.filter((a) => a.decision === "pending").length,
@@ -148,7 +154,7 @@ export function getImprovements() {
 }
 
 export async function runEvals() {
-  return runEvalSuite("2.1.0");
+  return runEvalSuite("3.0.0");
 }
 
 export async function runSimulations() {
@@ -217,8 +223,39 @@ export function health() {
     sandboxWrites: store.state.sandbox.writes.length,
     credentials: store.state.credentials.length,
     adapters: listAdapters(),
+    kms: runtimeVerify(),
+    warehouses: listWarehouseProfiles(),
+    grants: store.state.grants,
   };
 }
 
-export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters };
+export function putGrant(
+  actorId: string,
+  input: {
+    principalId: string;
+    tool: string;
+    task: string;
+    actions: string[];
+    maxRisk: AutonomyGrant["maxRisk"];
+  },
+) {
+  const store = getStore();
+  const actor = store.principal(actorId);
+  if (!actor) throw new Error("Unknown principal");
+  const issued = issueGrant(actor, input);
+  if (!issued.ok) return issued;
+  store.addGrant(issued.grant);
+  store.emit({
+    taskId: null,
+    sessionId: null,
+    principalId: actorId,
+    eventType: "autonomy.grant.issued",
+    resourceIds: [issued.grant.id, issued.grant.tool, issued.grant.task],
+    correlationId: issued.grant.id,
+    summary: `Selected workflow ${issued.grant.tool}/${issued.grant.task} for ${issued.grant.principalId}. Not promoted.`,
+  });
+  return issued;
+}
+
+export { AGENT_RELEASE, POLICY_VERSION, evaluatePolicy, getStore, resetStore, runOperatorSimulations, listAdapters, issueGrant };
 export type { KernelStore };

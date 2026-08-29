@@ -3,7 +3,7 @@
 Fovea treats control-plane changes like firmware.
 
 1. Do not widen permissions in a lower policy layer.
-2. Add or update evals **and** an operator simulation for every behavioral change.
+2. Add or update evals **and** an operator simulation for every behavioral change. v3 ships eight journeys.
 3. Critical security eval failures cannot be averaged away.
 4. Agents may propose kernel changes; they must not deploy them.
 5. Run `npm test` and `npm run typecheck` before review.

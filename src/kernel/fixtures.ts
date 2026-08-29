@@ -317,6 +317,25 @@ export const TOOLS: ToolRecord[] = [
     description:
       "Idempotent writes to sandbox.* only. Requires exact-hash approval and a short-lived credential. Production datasets are never in scope.",
   },
+  {
+    id: "warehouse.live",
+    owner: "data-platform",
+    riskTier: 4,
+    capabilities: ["read"],
+    dataClasses: ["internal", "confidential", "restricted"],
+    authMode: "workload",
+    networkZone: "data",
+    maxCallDurationSeconds: 300,
+    defaultRateLimit: "5/min",
+    supportsDryRun: true,
+    supportsIdempotency: true,
+    outputTrust: "untrusted_data",
+    promptInjectionRisk: "high",
+    auditRequired: true,
+    status: "approved",
+    description:
+      "Live warehouse adapter. Registered, policy-gated, not on any Stage B principal. Writes stay disabled even if a DSN is present.",
+  },
 ];
 
 export const MODELS: ModelRecord[] = [

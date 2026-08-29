@@ -34,7 +34,7 @@ function EvalsPage() {
       <PageHeader
         kicker="Govern"
         title="Evaluations"
-        description="Hard gates cannot be averaged away. Six operator desks: analyst morning, incident afternoon, sandbox write, adversarial day, auditor shift, backfill plan-only."
+        description="Hard gates cannot be averaged away. Eight operator desks, including the refused global-autonomy switch and a gated live warehouse."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => evalMut.mutate()} disabled={evalMut.isPending}>

@@ -2,7 +2,7 @@
 
 This is an **open-source Agentic OS** (name: **Fovea**). Continue in place. Do not scaffold a new app.
 
-## Current version: v2.1.0 — Operator desk (prod exec still off)
+## Current version: v3.0.0 — Selected Stage D (prod exec still off, Auth still OFF)
 
 Locked defaults:
 
@@ -11,6 +11,9 @@ Locked defaults:
 - Database ON (unowned control snapshot via PGLite/Neon; personal memory is in-process only)
 - Principals remain Stage B. Writes require exact-hash approval.
 - Stage C path: sandbox.* writes after approval + short-lived credential. Production execution disabled.
+- Stage D is selected workflows only: per-tool, per-task, per-risk grants. No global autonomous switch.
+- Live warehouse adapter is registered and policy-gated. No DSN in the demo. Writes stay disabled.
+- Releases sign and verify through the demo KMS. `--skip-signature-check` does not exist.
 - Skills: investigate-metric, investigate-incident, write-and-validate-sql, plan-backfill, session-close
 - Operator simulations in `src/kernel/simulations.ts` are a release input.
 
@@ -20,7 +23,7 @@ See README “principles” and the original implementation guide. Intersection 
 
 ## Where to edit
 
-- Kernel: `src/kernel/` (policy, orchestrator, evals, tools, sql, credentials, sandbox, durable, simulations)
+- Kernel: `src/kernel/` (policy, orchestrator, evals, tools, sql, credentials, sandbox, durable, simulations, kms, grants, warehouse)
 - Portal: `src/routes/_portal/`
 - Persist: `src/lib/control-persist.ts` + `migrations/0002_fovea_control.sql`
 - Invariant tests: `src/kernel/invariants.test.ts`
@@ -29,6 +32,7 @@ See README “principles” and the original implementation guide. Intersection 
 
 ## Next versions (do these, don’t rebuild)
 
-- **v3** — SSO, KMS signing, live warehouse adapter behind policy. Auth stays OFF until the user explicitly asks for accounts.
+- **Accounts / SSO** — only if the user explicitly asks for accounts, sign-in, or login. Until then Auth stays OFF.
+- Live warehouse DSN wiring stays behind policy even if a DSN appears.
 
 Keep the portal on `0.0.0.0:8080` via `npm run dev` and `startup.sh`.

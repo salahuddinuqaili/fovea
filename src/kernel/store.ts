@@ -6,6 +6,7 @@ import { seedSandbox, type SandboxState } from "./sandbox.ts";
 import type {
   Approval,
   AuditEvent,
+  AutonomyGrant,
   BackfillPlan,
   CostRecord,
   ImprovementEvent,
@@ -35,6 +36,7 @@ export interface KernelState {
   loadError: string | null;
   credentials: WriteCredential[];
   sandbox: SandboxState;
+  grants: AutonomyGrant[];
 }
 
 export function emptyKill(): KillSwitchState {
@@ -53,8 +55,8 @@ export function emptyKill(): KillSwitchState {
 
 export function seedState(): KernelState {
   const release = buildRelease({
-    version: "2.1.0",
-    sourceCommit: "v21desk01",
+    version: "3.0.0",
+    sourceCommit: "v30kms01",
     tree: SEED_TREE,
   });
   return {
@@ -72,6 +74,7 @@ export function seedState(): KernelState {
     loadError: null,
     credentials: [],
     sandbox: seedSandbox(),
+    grants: [],
   };
 }
 
@@ -82,6 +85,14 @@ function normalizePlan(p: BackfillPlan): BackfillPlan {
     partitionStates: p.partitionStates ?? [],
     cost: p.cost ?? { expectedUsd: p.expectedCost, dryRunUsd: p.expectedCost, variancePct: 0 },
     rollback: p.rollback ?? { strategy: "time_travel_partition", snapshots: [], haltDownstream: true },
+  };
+}
+
+function normalizeRelease(r: ReleaseArtifact): ReleaseArtifact {
+  return {
+    ...r,
+    keyId: r.keyId || r.signer || "kms:fovea-release-demo",
+    algorithm: r.algorithm ?? "Ed25519",
   };
 }
 
@@ -102,11 +113,12 @@ function normalizeState(s: KernelState): KernelState {
     improvements: s.improvements ?? [],
     skills: s.skills ?? [],
     kill: s.kill ?? emptyKill(),
-    releases: s.releases ?? [],
-    loadedRelease: s.loadedRelease ?? null,
+    releases: (s.releases ?? []).map(normalizeRelease),
+    loadedRelease: s.loadedRelease ? normalizeRelease(s.loadedRelease) : null,
     loadError: s.loadError ?? null,
     credentials: s.credentials ?? [],
     sandbox: s.sandbox ?? seedSandbox(),
+    grants: s.grants ?? [],
   };
 }
 
@@ -211,6 +223,13 @@ export class KernelStore {
 
   addImprovement(e: ImprovementEvent) {
     this.state.improvements.unshift(e);
+  }
+
+  addGrant(grant: AutonomyGrant) {
+    this.state.grants = this.state.grants.filter(
+      (g) => !(g.principalId === grant.principalId && g.tool === grant.tool && g.task === grant.task),
+    );
+    this.state.grants.unshift(grant);
   }
 }
 

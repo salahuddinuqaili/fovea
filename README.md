@@ -32,13 +32,15 @@ Press **⌘K** (or **Ctrl+K**) any time you feel lost. Pick “Operator guide”
 | *What was north-star revenue last week?* | A **supported** number, the SQL, and provenance. |
 | *How is revenue doing?* | **Abstention.** “Revenue” maps to more than one definition. That is success. |
 | *Investigate the dip last week.* | An **incident brief** across three canonical metrics. It will not claim the pipeline *caused* the dip. Copy the **evidence pack** from the right-hand pane if you want the JSON. |
+| *Enable autonomous mode for everyone.* | **Refused.** There is no global switch. |
+| *Connect the live warehouse.* | **Gated.** The adapter is registered. Maya cannot arm it. Writes stay disabled. |
 | The sandbox `INSERT` from Command (or ⌘K → Sandbox write) | **Needs approval.** Maya cannot approve her own write. |
 | Then switch the header to **Jordan Hale** and approve | A short-lived sandbox credential. One row. Replay does nothing. |
 | Switch to **Riley Park**, open Audit, then switch back to Maya | Riley can read the stream. Maya cannot. |
 
 Named-metric answers stay deterministic even if you never set an API key. Optional: `XAI_API_KEY` for freeform analysis.
 
-That’s the whole first run. If those six things happen, Fovea is working.
+That’s the first run. If those things happen, Fovea is working.
 
 ---
 
@@ -52,6 +54,8 @@ That’s the whole first run. If those six things happen, Fovea is working.
 | Riley can see Audit, Maya cannot | Role intersection, not a bug. | Act as Riley to read the stream. |
 | Budget exhausted | The $25 demo session is spent. | Ask “Close the session.” Reads after that still need remaining budget. |
 | Production `INSERT` never runs | Correct. Stage B/C demo. | Sandbox writes run after approval. Production stays gated. |
+| “Enable autonomous mode” refused | There is no global switch. | Grants would have to name one tool, one task, one risk ceiling. |
+| “Connect the live warehouse” gated | The live adapter is not on Maya’s allowlist. | Ask a named metric. The fixture is still the read path. |
 
 A confident wrong number is a failure. A refusal is not.
 
@@ -73,20 +77,18 @@ The header switcher (or **⌘K → Act as**) is not a login. It is whose desk yo
 
 ## What this version is
 
-**v2.1 — Operator desk**
+**v3.0 — Selected Stage D**
 
-- One question produces an incident brief (north-star, fill rate, refund rate) without a causal claim
-- Every result has a copyable **evidence pack** (claim, citations, hashes)
-- Session cost budget is enforced
-- In-app operator guide at `/guide`, plus a four-step first run on Command
-- Sandbox writes still require exact-hash approval and a short-lived credential
-- Backfill adapters (dbt + scheduled query) plan, cost, and roll back on paper — `execute()` stays disabled
-- Signed releases, eval hard gates, six operator simulations
+- There is **no global autonomous switch**. “Enable autonomous mode for everyone” is refused.
+- A Stage D grant, if issued, must name one principal, one tool, one task, and a risk ceiling. Wildcards and writes are denied. A grant never promotes itself.
+- Releases sign and verify through a **demo KMS**. `--skip-signature-check` does not exist. Raw PEMs are not accepted.
+- A **live warehouse** adapter is registered and policy-gated. This demo has no DSN. Writes stay disabled.
+- Everything from v2.1 still holds: incident briefs, evidence packs, session budget, sandbox writes after exact-hash approval, plan-only backfills, eight operator simulations
 
 **Not in this version**
 
-- Real warehouse or SSO
-- KMS / HSM signing
+- Real SSO / accounts (the header switcher is not a login)
+- A live warehouse DSN
 - Production backfill execution
 - Arbitrary plugins or MCP install
 
@@ -112,7 +114,7 @@ migrations/     unowned control snapshot — personal memory is never stored her
 ```
 
 ```bash
-npm test         # invariants, eval hard gates, six operator simulations
+npm test         # invariants, eval hard gates, eight operator simulations
 npm run typecheck
 ```
 

@@ -26,7 +26,7 @@ function ReleasesPage() {
       <PageHeader
         kicker="Govern"
         title="Releases"
-        description="Production executes authorized artifacts, not repository state. There is no --skip-signature-check."
+        description="Production executes authorized artifacts, not repository state. Signatures go through the KMS key id. There is no --skip-signature-check."
       />
       <div className="space-y-6 p-4 md:p-8">
         <div className="rounded-[var(--radius-lg)] border border-border bg-surface p-5">
@@ -40,6 +40,8 @@ function ReleasesPage() {
             <Row k="Commit" v={rel?.sourceCommit ?? "—"} />
             <Row k="Digest" v={shortId(rel?.artifactDigest ?? "", 16)} />
             <Row k="Signer" v={rel?.signer ?? "—"} />
+            <Row k="KMS key" v={rel?.keyId ?? "—"} />
+            <Row k="Algorithm" v={rel?.algorithm ?? "—"} />
             <Row k="Built" v={rel?.builtAt ?? "—"} />
           </dl>
           {boot.data?.loadError ? <p className="mt-3 text-sm text-danger">{boot.data.loadError}</p> : null}

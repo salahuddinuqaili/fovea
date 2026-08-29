@@ -34,6 +34,17 @@ function HealthPage() {
         <Card k="OS" v={h?.os ?? "—"} ok={h?.os === "up"} />
         <Card k="Write plane" v={h?.writePlane ?? "—"} ok={h?.writePlane !== "disabled"} />
         <Card k="Pending approvals" v={String(h?.pendingApprovals ?? 0)} ok />
+        <Card
+          k="KMS"
+          v={h?.kms?.ok ? "Verified" : "Blocked"}
+          ok={Boolean(h?.kms?.ok)}
+        />
+        <Card
+          k="Live warehouse"
+          v={h?.warehouses?.find((w) => w.id === "live")?.connected ? "Connected" : "Gated"}
+          ok={h?.warehouses?.find((w) => w.id === "live")?.writes === "disabled"}
+        />
+        <Card k="Selected grants" v={String(h?.grants?.length ?? 0)} ok />
       </div>
       <div className="flex flex-wrap gap-2 px-4 md:px-8">
         <Button variant="secondary" onClick={() => mut.mutate({ writePlane: true })}>

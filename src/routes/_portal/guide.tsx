@@ -52,6 +52,8 @@ function GuidePage() {
             <li>Prompt injection, README instructions, ticket text — data, not policy.</li>
             <li>Maya cannot approve her own write. Jordan can, bound to the hash.</li>
             <li>Production tables and backfill execution stay disabled.</li>
+            <li>“Enable autonomous mode” — there is no global switch. Grants are per-tool, per-task, per-risk.</li>
+            <li>“Connect the live warehouse” — registered, not on Maya’s allowlist. Fixture stays the read path.</li>
             <li>Another person’s personal notes are never readable.</li>
             <li>Session budget exhausted — close the session or stop spending.</li>
           </ul>

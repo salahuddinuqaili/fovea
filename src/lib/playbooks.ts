@@ -112,6 +112,20 @@ export const PLAYBOOKS: Playbook[] = [
     roles: ["approver", "auditor", "security_owner"],
   },
   {
+    id: "autonomy",
+    kicker: "Autonomy",
+    q: "Enable autonomous mode for everyone.",
+    why: "There is no global switch. Stage D is per-tool, per-task, per-risk.",
+    roles: ["analyst", "os_owner", "security_owner", "auditor"],
+  },
+  {
+    id: "live",
+    kicker: "Live warehouse",
+    q: "Connect the live warehouse.",
+    why: "Registered, policy-gated, not on Maya’s allowlist. Writes stay disabled.",
+    roles: ["analyst", "os_owner", "security_owner"],
+  },
+  {
     id: "close",
     kicker: "Session",
     q: "Close the session.",

@@ -22,6 +22,8 @@ const JOURNEYS = [
   { title: "Adversarial day", body: "Prompt injections, README instructions, and cross-user memory probes are refused." },
   { title: "Auditor shift", body: "Riley reads the append-only stream. Maya cannot." },
   { title: "Backfill plan", body: "Downstream impact and cost are computed. Production execution stays disabled." },
+  { title: "Autonomy switch", body: "Enable autonomous mode is refused. Stage D is a named grant, never a wildcard." },
+  { title: "Live warehouse", body: "The adapter is registered and gated. No DSN, no principal allowlist, writes disabled." },
 ];
 
 function AboutPage() {
@@ -40,7 +42,7 @@ function AboutPage() {
         </Link>
       </header>
       <main className="mx-auto max-w-5xl px-5 pb-24">
-        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v2.1</p>
+        <p className="mt-10 text-[11px] uppercase tracking-[0.18em] text-subtle">Agentic OS · v3.0</p>
         <h1 className="mt-3 max-w-3xl font-display text-5xl leading-tight tracking-tight md:text-7xl">
           Accuracy at the center.
         </h1>

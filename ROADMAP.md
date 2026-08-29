@@ -35,8 +35,14 @@ Working kernel + portal. Fixture warehouse. Plan-only backfills. Signed demo rel
 - In-app operator guide and first-run on Command
 - README rewritten for people who will actually click around
 
-## v3 — Selected Stage D workflows
+## v3 — Selected Stage D workflows (this tree)
 
-- Per-tool, per-task, per-risk permissions
-- No global “autonomous” switch
-- KMS/HSM-backed signing, runtime verification in real deploy
+- Per-tool, per-task, per-risk permissions. No global “autonomous” switch.
+- Demo KMS signing + runtime verification. `--skip-signature-check` is not available.
+- Live warehouse adapter registered and policy-gated. Writes stay disabled. No DSN in the demo.
+- Eight operator simulations as a release input.
+
+## Later — Accounts and a real warehouse DSN
+
+- SSO / accounts only when the user explicitly asks for them (Auth stays OFF until then)
+- KMS/HSM in a real deploy, live warehouse DSN still behind policy

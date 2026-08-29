@@ -3,6 +3,7 @@ import { emptyKill, type KernelState } from "./store.ts";
 import type {
   Approval,
   AuditEvent,
+  AutonomyGrant,
   CostRecord,
   ImprovementEvent,
   KillSwitchState,
@@ -31,6 +32,7 @@ export interface DurableSlice {
   loadError: string | null;
   credentials: WriteCredential[];
   sandbox: SandboxState;
+  grants?: AutonomyGrant[];
 }
 
 /**
@@ -54,6 +56,7 @@ export function durableSlice(state: KernelState): DurableSlice {
     loadError: state.loadError,
     credentials: state.credentials,
     sandbox: state.sandbox,
+    grants: state.grants ?? [],
   };
 }
 
@@ -83,6 +86,7 @@ export function applyDurableSlice(state: KernelState, slice: DurableSlice): Kern
     loadError: slice.loadError ?? null,
     credentials: slice.credentials ?? [],
     sandbox: slice.sandbox ?? seedSandbox(),
+    grants: slice.grants ?? [],
   };
 }
 
