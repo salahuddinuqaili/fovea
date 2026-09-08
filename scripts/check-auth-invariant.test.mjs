@@ -4,6 +4,7 @@ import { mkdtempSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
+import { HAS_APP_ENV } from "./harness-assets.mjs";
 import { promisify } from "node:util";
 import {
   authEnabledFromEnvValue,
@@ -90,7 +91,7 @@ test("only a divergence warns the smoke verdict", () => {
   }
 });
 
-test("the build side resolves the template's shipped app-env", () => {
+test("the build side resolves the template's shipped app-env", { skip: !HAS_APP_ENV }, () => {
   assert.equal(buildAuthEnabled(projectRoot(), {}), false);
   assert.equal(buildAuthEnabled(projectRoot(), { VITE_AUTH_ENABLED: "true" }), true);
 });
