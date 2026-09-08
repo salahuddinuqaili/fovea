@@ -80,6 +80,9 @@ function distinctiveRole(roles: string[]) {
 }
 
 const MOBILE_PRIMARY = NAV[0].items.slice(0, 4);
+const MOBILE_OPERATE_OVERFLOW = NAV[0].items.filter(
+  (item) => !MOBILE_PRIMARY.some((p) => p.to === item.to),
+);
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -102,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="mt-0.5 text-[10px] uppercase tracking-[0.18em] text-subtle">Agentic OS</div>
           </div>
         </div>
-        <nav className="flex-1 overflow-y-auto px-3 pb-6">
+        <nav className="flex-1 overflow-y-auto px-3 pb-6" aria-label="Primary">
           {NAV.map((group) => (
             <div key={group.label} className="mb-5">
               <div className="px-2 pb-1.5 text-[10px] font-medium uppercase tracking-[0.16em] text-subtle">
@@ -116,6 +119,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <li key={item.to}>
                       <Link
                         to={item.to}
+                        aria-current={active ? "page" : undefined}
                         className={cn(
                           "flex h-9 items-center gap-2.5 rounded-[var(--radius-sm)] px-2.5 text-sm transition-colors",
                           active ? "bg-surface-2 text-fg" : "text-muted hover:bg-surface-2 hover:text-fg",
@@ -174,7 +178,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto pb-20 md:pb-0">{children}</main>
-        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden">
+        <nav className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-5 border-t border-border bg-surface pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Mobile">
           {MOBILE_PRIMARY.map((item) => {
             const Icon = item.icon;
             const active = item.to === "/" ? pathname === "/" : pathname.startsWith(item.to);
@@ -182,6 +186,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Link
                 key={item.to}
                 to={item.to}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex h-14 flex-col items-center justify-center gap-0.5 text-[10px]",
                   active ? "text-fg" : "text-muted",
@@ -194,6 +199,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
           <button
             type="button"
+            aria-expanded={moreOpen}
+            aria-controls="mobile-more-menu"
             onClick={() => setMoreOpen((o) => !o)}
             className={cn(
               "flex h-14 flex-col items-center justify-center gap-0.5 text-[10px]",
@@ -212,8 +219,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               aria-label="Close menu"
               onClick={() => setMoreOpen(false)}
             />
-            <div className="absolute inset-x-0 bottom-0 max-h-[70dvh] overflow-y-auto rounded-t-[var(--radius-xl)] border border-border bg-surface p-4 pb-24">
-              {NAV.slice(1).map((group) => (
+            <div
+              id="mobile-more-menu"
+              className="absolute inset-x-0 bottom-0 max-h-[70dvh] overflow-y-auto rounded-t-[var(--radius-xl)] border border-border bg-surface p-4 pb-24"
+            >
+              {[
+                ...(MOBILE_OPERATE_OVERFLOW.length
+                  ? [{ label: "Operate", items: MOBILE_OPERATE_OVERFLOW }]
+                  : []),
+                ...NAV.slice(1),
+              ].map((group) => (
                 <div key={group.label} className="mb-4">
                   <div className="px-1 pb-2 text-[10px] font-medium uppercase tracking-[0.16em] text-subtle">
                     {group.label}
@@ -221,10 +236,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <div className="grid grid-cols-2 gap-2">
                     {group.items.map((item) => {
                       const Icon = item.icon;
+                      const active = item.to === "/" ? pathname === "/" : pathname === item.to || pathname.startsWith(`${item.to}/`);
                       return (
                         <Link
                           key={item.to}
                           to={item.to}
+                          aria-current={active ? "page" : undefined}
                           onClick={() => setMoreOpen(false)}
                           className="flex h-12 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-bg px-3 text-sm"
                         >
@@ -236,14 +253,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
               ))}
-              <Link
-                to="/backfills"
-                onClick={() => setMoreOpen(false)}
-                className="flex h-12 items-center gap-2 rounded-[var(--radius-md)] border border-border bg-bg px-3 text-sm"
-              >
-                <GitBranch className="size-4 text-muted" />
-                Backfills
-              </Link>
             </div>
           </div>
         ) : null}
