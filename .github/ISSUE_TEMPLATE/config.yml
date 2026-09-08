@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a vulnerability
+    url: https://github.com/salahuddinuqaili/fovea/security/advisories/new
+    about: Private report for policy, signing, SQL validation, credentials, grants, or memory isolation.
