@@ -1,0 +1,14 @@
+{
+  "id": "booked_revenue",
+  "name": "Booked revenue",
+  "status": "draft",
+  "owner": "finance-analytics",
+  "description": "Proposed recognized-revenue definition. Not canonical. Do not use in executive reporting.",
+  "formula": "sum(recognized_revenue_usd)",
+  "grains": ["month"],
+  "filters": [],
+  "sourceTable": "finance.stg_recognition",
+  "dataClass": "confidential",
+  "aliases": ["recognized revenue", "bookings"],
+  "allowedSchemas": ["finance"]
+}

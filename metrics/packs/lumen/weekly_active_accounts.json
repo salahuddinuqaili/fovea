@@ -1,0 +1,14 @@
+{
+  "id": "weekly_active_accounts",
+  "name": "Weekly active accounts",
+  "status": "canonical",
+  "owner": "growth-analytics",
+  "description": "Count of distinct account_id with at least one qualifying session in the ISO week.",
+  "formula": "count(distinct fct_sessions.account_id) where is_qualified = true",
+  "grains": ["week"],
+  "filters": ["is_qualified=true"],
+  "sourceTable": "analytics.fct_sessions",
+  "dataClass": "internal",
+  "aliases": ["waa", "wau", "weekly active"],
+  "allowedSchemas": ["analytics"]
+}

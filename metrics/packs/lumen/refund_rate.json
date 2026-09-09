@@ -1,0 +1,14 @@
+{
+  "id": "refund_rate",
+  "name": "Refund rate",
+  "status": "canonical",
+  "owner": "ops-analytics",
+  "description": "Refunded GMV divided by north-star GMV for completed non-test USD orders.",
+  "formula": "sum(refunded_gmv_usd) / nullif(sum(gross_revenue_usd), 0)",
+  "grains": ["week"],
+  "filters": ["status=completed", "is_test=false", "currency=USD"],
+  "sourceTable": "analytics.fct_refunds",
+  "dataClass": "confidential",
+  "aliases": ["refunds", "credits and refunds", "return rate"],
+  "allowedSchemas": ["analytics"]
+}

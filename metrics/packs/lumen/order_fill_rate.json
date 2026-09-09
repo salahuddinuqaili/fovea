@@ -1,0 +1,14 @@
+{
+  "id": "order_fill_rate",
+  "name": "Order fill rate",
+  "status": "canonical",
+  "owner": "ops-analytics",
+  "description": "Filled units divided by ordered units for completed orders.",
+  "formula": "sum(filled_qty) / nullif(sum(ordered_qty), 0)",
+  "grains": ["day", "week"],
+  "filters": ["status=completed"],
+  "sourceTable": "analytics.fct_order_items",
+  "dataClass": "internal",
+  "aliases": ["fill rate", "fulfillment rate", "sla hit rate"],
+  "allowedSchemas": ["analytics"]
+}
