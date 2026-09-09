@@ -1,0 +1,14 @@
+{
+  "id": "northstar_revenue",
+  "name": "North-star revenue",
+  "status": "canonical",
+  "owner": "finance-analytics",
+  "description": "Gross merchandise value of completed orders in USD, excluding tax, shipping, and cancelled/returned orders.",
+  "formula": "sum(fct_orders.gross_revenue_usd) where status = 'completed' and is_test = false",
+  "grains": ["day", "week", "month"],
+  "filters": ["status=completed", "is_test=false", "currency=USD"],
+  "sourceTable": "analytics.fct_orders",
+  "dataClass": "confidential",
+  "aliases": ["gmv", "north-star", "northstar", "gross merchandise value"],
+  "allowedSchemas": ["analytics"]
+}
