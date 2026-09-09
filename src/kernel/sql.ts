@@ -202,7 +202,3 @@ export function isProdTable(table: string) {
   const t = table.toLowerCase();
   return t.startsWith("analytics.") || t.startsWith("raw.") || t.startsWith("finance.");
 }
-
-export function looksLikeWriteSql(text: string) {
-  return WRITE_KEYWORDS.test(stripSqlComments(text));
-}

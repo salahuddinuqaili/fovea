@@ -49,6 +49,9 @@ Not in this tree: SSO, a live warehouse DSN, production execution, arbitrary plu
 ```bash
 npm test         # invariants, eval hard gates, seventeen operator simulations
 npm run typecheck
+npm run lint
+npm run check:auth # requires npm run dev running in another terminal
+npm run build
 ```
 
 A critical security eval failure blocks the release. You cannot average it away.

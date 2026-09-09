@@ -531,25 +531,6 @@ export interface QueryJob {
   dryRun: boolean;
 }
 
-export interface CoveringGrant {
-  id: string;
-  tool: string;
-  task: string;
-  actions: string[];
-  expiresAt: string;
-  continuesReads: boolean;
-}
-
-export interface ActiveGrantView {
-  id: string;
-  principalId: string;
-  principalName: string;
-  tool: string;
-  task: string;
-  continuesReads: boolean;
-  expiresAt: string;
-}
-
 export interface DeskHandoff {
   id: string;
   fromPrincipalId: string;
@@ -562,24 +543,6 @@ export interface DeskHandoff {
   createdAt: string;
   expiresAt: string;
   openedAt: string | null;
-}
-
-export interface InboxHandoffView {
-  id: string;
-  fromName: string;
-  kind: DeskHandoff["kind"];
-  label: string;
-  href: string;
-  hint: string;
-  expiresAt: string;
-}
-
-export interface InboxApprovalView {
-  approvalId: string;
-  requestedByName: string;
-  actionSummary: string;
-  hash: string;
-  estimatedCost: number;
 }
 
 export const KERNEL_VERSION = "12.0.0";

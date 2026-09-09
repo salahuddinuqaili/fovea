@@ -7,16 +7,11 @@ import {
   TICKETS,
   WAA,
   WEEKLY_REVENUE,
-  TOOLS,
 } from "./fixtures.ts";
 import { tablesInSql, validateReadSql } from "./sql.ts";
-import type { JsonValue, QueryJob, ToolCall, ToolRecord } from "./types.ts";
+import type { JsonValue, QueryJob, ToolCall } from "./types.ts";
 
 export { tablesInSql, validateReadSql };
-
-export function getTool(id: string): ToolRecord | undefined {
-  return TOOLS.find((t) => t.id === id);
-}
 
 export function lintSql(sql: string): { ok: boolean; notes: string[] } {
   const v = validateReadSql(sql);

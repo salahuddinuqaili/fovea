@@ -53,7 +53,3 @@ export function verifyDigest(
     return false;
   }
 }
-
-export function hashAction(action: Record<string, unknown>) {
-  return digestObject(action);
-}

@@ -32,10 +32,6 @@ const KEYS: Record<string, KmsKey & { privatePem: string; publicPem: string }> =
   },
 };
 
-export function kmsList(): KmsKey[] {
-  return Object.values(KEYS).map(({ privatePem: _p, publicPem: _u, ...key }) => key);
-}
-
 export function kmsSign(digestHex: string, keyId = RELEASE_KEY_ID): { ok: true; signature: string; keyId: string } | { ok: false; reason: string } {
   const key = KEYS[keyId];
   if (!key || key.status !== "active") return { ok: false, reason: `Unknown or disabled KMS key ${keyId}.` };

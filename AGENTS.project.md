@@ -24,7 +24,7 @@ Locked defaults:
 
 ## Do not reopen
 
-See README “principles” and the original implementation guide. Intersection permissions, signed releases, personal-memory isolation, no arbitrary plugins, tool output is not policy. Do not add a global autonomy switch.
+See the README hard stops, `SECURITY.md`, and `ROADMAP.md`. Intersection permissions, signed releases, personal-memory isolation, no arbitrary plugins, tool output is not policy. Do not add a global autonomy switch.
 
 ## Where to edit
 

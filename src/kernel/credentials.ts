@@ -22,17 +22,6 @@ export interface ExecutionReport {
   note: string;
 }
 
-export function proposedActionFrom(approval: Approval): Record<string, string | number | boolean | null> {
-  const c = approval.approvedConstraints;
-  return {
-    kind: String(c.kind ?? ""),
-    sql: String(c.sql ?? ""),
-    table: String(c.table ?? ""),
-    idempotencyKey: String(c.idempotencyKey ?? ""),
-    planHash: String(c.planHash ?? ""),
-  };
-}
-
 export function hashProposedAction(approval: Approval): string {
   const kind = String(approval.approvedConstraints.kind ?? "");
   if (kind === "backfill") {

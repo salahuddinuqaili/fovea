@@ -5,10 +5,6 @@ export function listModels(): ModelRecord[] {
   return MODELS.map((m) => ({ ...m }));
 }
 
-export function getModel(alias: string) {
-  return MODELS.find((m) => m.alias === alias) ?? null;
-}
-
 export function pickModel(input: {
   purpose: "sql_generation" | "analysis" | "judge" | "summarization" | "planning" | "other";
   dataClass: DataClass;

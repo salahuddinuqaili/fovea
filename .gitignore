@@ -14,4 +14,3 @@ attachments/
 !.env.example
 .DS_Store
 public/__grok/
-AGENTS.md

@@ -1,4 +1,4 @@
-import { sha256, uuid } from "./crypto.ts";
+import { uuid } from "./crypto.ts";
 import { validateSandboxWriteSql } from "./sql.ts";
 import type { JsonValue } from "./types.ts";
 
@@ -215,10 +215,6 @@ export function executeSandboxWrite(
     idempotencyKey: record.idempotencyKey,
     row: record.row,
   };
-}
-
-export function sandboxDigest(state: SandboxState) {
-  return sha256(JSON.stringify({ tables: Object.keys(state.tables).sort(), writes: state.writes.length }));
 }
 
 export type { JsonValue };

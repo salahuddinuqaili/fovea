@@ -7,7 +7,6 @@ import type {
   ToolRecord,
 } from "./types.ts";
 
-export const ORG_ID = "org_lumen";
 export const TEAM_ANALYTICS = "team_analytics";
 
 export const PRINCIPALS: Principal[] = [

@@ -6,7 +6,7 @@ Fovea treats control-plane changes like firmware.
 2. Add or update evals **and** an operator simulation for every behavioral change. This tree ships seventeen journeys in `src/kernel/simulations.ts`.
 3. Critical security eval failures cannot be averaged away.
 4. Agents may propose kernel changes; they must not deploy them.
-5. Node 22. Run `npm test` and `npm run typecheck` before review.
+5. Node 22. Run `npm test`, `npm run typecheck`, `npm run lint`, `npm run check:auth` (with `npm run dev` running in another terminal), and `npm run build` before review.
 6. Keep the README written for operators first, contributors second.
 
 Do not add a global autonomy switch. Do not turn Auth on unless the change explicitly asks for accounts. Production execution stays disabled.

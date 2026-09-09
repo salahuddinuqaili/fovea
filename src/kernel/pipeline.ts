@@ -1,7 +1,7 @@
 import { digestObject, uuid } from "./crypto.ts";
 import { PIPELINES } from "./fixtures.ts";
 import { adapterFor } from "./adapters.ts";
-import type { BackfillPlan, PipelineNode, RiskTier } from "./types.ts";
+import type { BackfillPlan, RiskTier } from "./types.ts";
 
 export function getNode(id: string) {
   return PIPELINES.find((n) => n.nodeId === id) ?? null;
@@ -62,7 +62,6 @@ export function planBackfill(input: {
   requestText: string;
 }): BackfillPlan {
   const target = resolveTarget(input.target, input.requestText);
-  const node = getNode(target);
   const upstream = walk(target, "up", 8).filter((id) => id !== target);
   const downstream = walk(target, "down", 8).filter((id) => id !== target);
   const all = [target, ...upstream, ...downstream];
@@ -154,7 +153,6 @@ export function parseRange(text: string): { start: string; end: string } {
   const explicit = text.match(/(\d{4}-\d{2}-\d{2}).+(\d{4}-\d{2}-\d{2})/);
   if (explicit) return { start: explicit[1], end: explicit[2] };
   if (days) {
-    const n = Math.min(90, Number(days[1]));
     return { start: "2026-08-27", end: "2026-08-28" }; // demo clock: failed partition window
   }
   if (/affected partition/i.test(text) || /after the (upstream )?correction/i.test(text)) {
@@ -162,8 +160,4 @@ export function parseRange(text: string): { start: string; end: string } {
   }
   if (/90 days/.test(text)) return { start: "2026-05-31", end: "2026-08-28" };
   return { start: "2026-08-27", end: "2026-08-27" };
-}
-
-export function nodeSummary(id: string): PipelineNode | null {
-  return getNode(id);
 }
