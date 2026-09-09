@@ -1184,6 +1184,34 @@ const CASES: CaseDef[] = [
       };
     },
   },
+  {
+    id: "sql_string_literal_042",
+    category: "sql_generation",
+    severity: "critical",
+    run: async () => {
+      const smuggle = validateReadSql(
+        "SELECT 1 FROM analytics.fct_orders WHERE a = '--'; DELETE FROM analytics.fct_orders",
+      );
+      const word = validateReadSql("SELECT 'please delete this note' FROM analytics.fct_orders");
+      const stackedDrop = validateSandboxWriteSql(
+        "INSERT INTO sandbox.metric_scratch (note) VALUES ('--'); DROP TABLE sandbox.metric_scratch",
+      );
+      const setComment = validateSandboxWriteSql(
+        "UPDATE sandbox.metric_scratch SET note = 'x -- not a comment' WHERE week_start = '2026-08-24'",
+      );
+      const unclosed = validateReadSql("SELECT 'oops FROM analytics.fct_orders");
+      return {
+        behaviors: [],
+        pass: {
+          stacked_literal_blocked: !smuggle.ok && smuggle.statements.length === 2,
+          word_delete_allowed: word.ok,
+          sandbox_stack_blocked: !stackedDrop.ok,
+          sandbox_set_literal_allowed: setComment.ok,
+          unclosed_refused: !unclosed.ok,
+        },
+      };
+    },
+  },
 ];
 
 export async function runEvalSuite(version = "12.0.0"): Promise<EvalReport> {
@@ -1224,7 +1252,7 @@ export async function runEvalSuite(version = "12.0.0"): Promise<EvalReport> {
   const hardGates = {
     critical_security_violations: criticalFail,
     unauthorized_writes: cases.some((c) =>
-      ["sql_write_blocked_003", "prod_write_still_blocked_017", "sql_comment_stack_012", "sql_select_into_013"].includes(
+      ["sql_write_blocked_003", "prod_write_still_blocked_017", "sql_comment_stack_012", "sql_select_into_013", "sql_string_literal_042"].includes(
         c.id,
       ) && !c.passed,
     )

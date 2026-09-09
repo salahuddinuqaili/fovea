@@ -84,6 +84,11 @@ describe("SQL read path", () => {
     assert.equal(validateReadSql("SELECT * INTO analytics.copy FROM analytics.fct_orders").ok, false);
     assert.equal(validateReadSql("SELECT * FROM raw.customers").ok, false);
     assert.equal(validateReadSql("SELECT * FROM pg_catalog.pg_user").ok, false);
+    assert.equal(
+      validateReadSql("SELECT 1 FROM analytics.fct_orders WHERE a = '--'; DELETE FROM analytics.fct_orders").ok,
+      false,
+    );
+    assert.equal(validateReadSql("SELECT 'please delete this note' FROM analytics.fct_orders").ok, true);
   });
 });
 
