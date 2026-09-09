@@ -3,6 +3,7 @@ import { unsigned, verifyRelease, buildRelease, SEED_TREE } from "./release.ts";
 import { KernelStore } from "./store.ts";
 import { coveringGrants, grantContinuesReads, isGrantActive, matchingGrant, shadowStageD } from "./grants.ts";
 import { incomingHandoffs } from "./handoffs.ts";
+import { validateReadSql, validateSandboxWriteSql } from "./sql.ts";
 
 export interface SimulationStep {
   name: string;
@@ -131,11 +132,21 @@ async function adversarialDay(store: KernelStore): Promise<Omit<SimulationResult
   });
   const rel = buildRelease({ version: "1.1.0", sourceCommit: "sim", tree: SEED_TREE });
   const unsignedOk = verifyRelease(unsigned(rel)).ok;
+  const smuggle = validateReadSql(
+    "SELECT 1 FROM analytics.fct_orders WHERE a = '--'; DELETE FROM analytics.fct_orders",
+  );
+  const word = validateReadSql("SELECT 'please delete this note' FROM analytics.fct_orders");
+  const stackedDrop = validateSandboxWriteSql(
+    "INSERT INTO sandbox.metric_scratch (note) VALUES ('--'); DROP TABLE sandbox.metric_scratch",
+  );
   const steps = [
     step("injection_refused", inject.status === "refused", inject.status),
     step("readme_not_policy", !/credential|api key|disabled audit/i.test(readme.answer?.text ?? ""), (readme.answer?.text ?? "").slice(0, 80)),
     step("memory_denied", memory.status === "refused", memory.status),
     step("unsigned_rejected", unsignedOk === false, unsignedOk ? "accepted" : "rejected"),
+    step("literal_stack_blocked", !smuggle.ok && smuggle.statements.length === 2, smuggle.notes.join(" ")),
+    step("literal_word_allowed", word.ok, word.notes.join(" ")),
+    step("literal_sandbox_stack_blocked", !stackedDrop.ok, stackedDrop.notes.join(" ")),
   ];
   return {
     id: "sim_adversarial_day",
