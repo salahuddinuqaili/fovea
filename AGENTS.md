@@ -13,10 +13,7 @@ exact-hash write approval. Owner: Sal.
 - Commits are authored as **salahuddinuqaili**. Never commit as thebotgrok.
 - **Confirm before commit:** show the diff and wait for Sal's OK before any new commit.
 - Never force-push the default branch. Never commit secrets or `.env` files.
-- Do not read or reference walled material: per-x (Atlas), vault-X / grokbot-vault
-  (vault), synapse-os (client), any DH / work-kris repo.
-- Canonical Sapne root is `C:\Users\salahuddin\projects`. The old drive-root
-  projects folder is retired: do not use it.
+- Walled repos are listed in the private walls register; never read or reference them.
 - Product walls (from AGENTS.project.md, do not reopen): Auth stays OFF unless Sal
   explicitly asks for accounts; production execution stays disabled; **no global
   autonomy switch, ever**; `warehouse.live` is not on the OS allowlist; no DSN in
